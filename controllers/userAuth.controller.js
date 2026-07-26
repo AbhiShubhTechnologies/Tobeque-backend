@@ -414,22 +414,7 @@ const createOrder = async (req, res, next) => {
       }
     }
 
-    // ── Send Order Confirmation Email (non-blocking) ──────────────────
-    // Fetch populated items for the email
-    const populatedItems = await OrderItem.find({ order: order._id });
-    // Fetch the full user record to get email
-    const emailUser = await User.findById(req.user.id).select('firstName lastName email phone');
-    // Fire & forget — don't await so order response isn't delayed by email
-    sendOrderConfirmationEmail(order.toJSON(), emailUser, populatedItems.map(i => i.toJSON()))
-      .then(result => {
-        if (result.success) {
-          console.log(`[Order ${order.orderNumber}] Invoice email sent successfully`);
-        } else {
-          console.warn(`[Order ${order.orderNumber}] Invoice email skipped/failed: ${result.reason || result.error}`);
-        }
-      })
-      .catch(err => console.error(`[Order ${order.orderNumber}] Unexpected email error:`, err.message));
-    // ─────────────────────────────────────────────────────────────────
+    // Order created successfully — email will be sent when admin confirms the order.
 
     res.status(201).json({
       success: true,
@@ -691,10 +676,7 @@ const verifyRazorpayPayment = async (req, res, next) => {
       }
     }
 
-    const populatedItems = await OrderItem.find({ order: order._id });
-    const emailUser = await User.findById(req.user.id).select('firstName lastName email phone');
-    sendOrderConfirmationEmail(order.toJSON(), emailUser, populatedItems.map(i => i.toJSON()))
-      .catch(err => console.error(`[Order ${order.orderNumber}] Unexpected email error:`, err.message));
+    // Order created successfully — email will be sent when admin confirms the order.
     // -- END DUPLICATED LOGIC --
 
     res.status(201).json({

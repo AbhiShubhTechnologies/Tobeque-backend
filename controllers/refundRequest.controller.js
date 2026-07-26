@@ -108,6 +108,16 @@ const submitRefundRequest = async (req, res, next) => {
     if (!returnReason) {
       return res.status(400).json({ success: false, error: 'Please select a reason for the return.' });
     }
+    
+    // Validate mandatory note field for returns
+    if (!reason || reason.trim() === '') {
+      return res.status(400).json({ success: false, error: 'Please provide additional details in the note field.' });
+    }
+
+    let proofImage = '';
+    if (req.file) {
+      proofImage = req.file.path; // Cloudinary URL
+    }
 
     const refund = await RefundRequest.create({
       name,
@@ -117,7 +127,8 @@ const submitRefundRequest = async (req, res, next) => {
       order: order._id,
       requestType: 'return',
       returnReason,
-      reason: reason || '',
+      reason: reason.trim(),
+      proofImage,
       status: 'pending',
       userId
     });

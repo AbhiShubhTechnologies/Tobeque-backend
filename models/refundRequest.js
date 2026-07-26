@@ -37,6 +37,7 @@ const RefundRequestSchema = new mongoose.Schema({
     default: 'pending'
   },
   adminNotes: { type: String, default: '' },
+  proofImage: { type: String, default: '' },
 
   // Link to registered user
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },

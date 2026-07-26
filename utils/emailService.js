@@ -122,7 +122,7 @@ const generateItemRows = (items = []) => {
 // ─────────────────────────────────────────────
 //  Build Full HTML Email Template
 // ─────────────────────────────────────────────
-const buildInvoiceHTML = ({ order, user, items }) => {
+const buildInvoiceHTML = ({ order, user, items = [] }) => {
   const firstName = user?.firstName || order?.billingAddress?.name?.split(' ')[0] || 'Valued Customer';
   const isCOD = (order.paymentMethod || '').toLowerCase() === 'cod';
   const paymentBadgeColor = isCOD ? '#f59e0b' : '#10b981';
@@ -130,11 +130,13 @@ const buildInvoiceHTML = ({ order, user, items }) => {
   const orderDate = formatDate(order.createdAt);
   const billingAddr  = formatAddress(order.billingAddress);
   const shippingAddr = formatAddress(order.shippingAddress);
-  const subtotal     = parseFloat(order.subtotal)     || 0;
-  const taxAmount    = parseFloat(order.taxAmount)    || 0;
-  const shippingCost = parseFloat(order.shippingCost) || 0;
+  
+  const itemsTax = items.reduce((sum, item) => sum + (parseFloat(item.taxAmount) || 0), 0);
+  const subtotal     = parseFloat(order.subtotal) || 0;
+  const taxAmount    = parseFloat(order.taxAmount) !== undefined && parseFloat(order.taxAmount) !== null ? parseFloat(order.taxAmount) : itemsTax;
+  const shippingCost = parseFloat(order.shippingCost !== undefined ? order.shippingCost : (order.shippingFee || 0));
   const discount     = parseFloat(order.discountAmount) || 0;
-  const total        = parseFloat(order.totalAmount)  || 0;
+  const total        = parseFloat(order.totalAmount) || 0;
 
   const itemsHTML = generateItemRows(items);
 
@@ -438,7 +440,7 @@ const sendOrderConfirmationEmail = async (order, user, items = []) => {
 
     const transporter = createTransporter();
 
-    const subject = `Your Tobeque Order #${order.orderNumber} has been received! 🎉`;
+    const subject = `Official Tax Invoice & Order Confirmation — Order #${order.orderNumber} 📄`;
 
     const mailOptions = {
       from: `"${process.env.SMTP_FROM_NAME || 'Tobeque'}" <${process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER}>`,

@@ -9,9 +9,10 @@ const {
   updateRefundStatus,
   deleteRefundRequest
 } = require('../controllers/refundRequest.controller');
+const upload = require('../middlewares/upload');
 
 // User: submit refund (must be logged in, validates order belongs to user)
-router.post('/', protectUser, submitRefundRequest);
+router.post('/', protectUser, upload.single('proofImage'), submitRefundRequest);
 
 // User: get their own refund requests (for profile page)
 router.get('/my', protectUser, getMyRefundRequests);

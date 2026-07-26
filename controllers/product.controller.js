@@ -177,8 +177,11 @@ const createProduct = async (req, res, next) => {
       categoryId,
       brandId,
       variants,
+      slug: customSlug,
       seoTitle,
       seoDescription,
+      seoKeywords,
+      seoSchema,
       countdownEvergreen,
       restartCountdownAfter,
       countdownTimerProfile,
@@ -208,7 +211,7 @@ const createProduct = async (req, res, next) => {
     }
 
     // Auto slug
-    const slug = slugify(name) + '-' + Math.floor(Math.random() * 1000);
+    const slug = customSlug ? slugify(customSlug) : (slugify(name) + '-' + Math.floor(Math.random() * 1000));
 
     // Get thumbnail from uploaded files (Multer saves to req.file or req.files)
     let thumbnail = '';
@@ -269,6 +272,8 @@ const createProduct = async (req, res, next) => {
       variants: parsedVariants,
       seoTitle,
       seoDescription,
+      seoKeywords,
+      seoSchema,
       countdownEvergreen: countdownEvergreen === 'true' || countdownEvergreen === true,
       restartCountdownAfter: restartCountdownAfter ? parseInt(restartCountdownAfter) : null,
       countdownTimerProfile,
@@ -397,9 +402,15 @@ const updateProduct = async (req, res, next) => {
       product.sku = sku;
     }
 
-    if (name && name !== product.name) {
+    const { slug: customSlug, seoKeywords, seoSchema } = req.body;
+
+    if (customSlug && customSlug !== product.slug) {
+      product.slug = slugify(customSlug);
+    } else if (name && name !== product.name && !customSlug) {
       product.name = name;
       product.slug = slugify(name) + '-' + Math.floor(Math.random() * 1000);
+    } else if (name) {
+      product.name = name;
     }
 
     product.barcode = barcode !== undefined ? barcode : product.barcode;
@@ -413,6 +424,8 @@ const updateProduct = async (req, res, next) => {
     product.status = status !== undefined ? status : product.status;
     product.seoTitle = seoTitle !== undefined ? seoTitle : product.seoTitle;
     product.seoDescription = seoDescription !== undefined ? seoDescription : product.seoDescription;
+    product.seoKeywords = seoKeywords !== undefined ? seoKeywords : product.seoKeywords;
+    product.seoSchema = seoSchema !== undefined ? seoSchema : product.seoSchema;
     product.category = categoryId !== undefined ? (categoryId || null) : product.category;
     product.brand = brandId !== undefined ? (brandId || null) : product.brand;
     

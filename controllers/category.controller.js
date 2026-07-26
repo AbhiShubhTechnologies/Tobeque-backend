@@ -41,7 +41,7 @@ const getCategories = async (req, res, next) => {
 // @access  Private
 const createCategory = async (req, res, next) => {
   try {
-    const { name, description, parentId, seoTitle, seoDescription } = req.body;
+    const { name, description, descriptionSections, parentId, seoTitle, seoDescription } = req.body;
 
     const slug = slugify(name) + '-' + Math.floor(Math.random() * 1000);
 
@@ -57,10 +57,22 @@ const createCategory = async (req, res, next) => {
       }
     }
 
+    let parsedDescriptionSections = [];
+    if (descriptionSections) {
+      try {
+        parsedDescriptionSections = typeof descriptionSections === 'string'
+          ? JSON.parse(descriptionSections)
+          : descriptionSections;
+      } catch (e) {
+        parsedDescriptionSections = [];
+      }
+    }
+
     const category = await Category.create({
       name,
       slug,
       description,
+      descriptionSections: parsedDescriptionSections,
       parentId: parentId || null,
       image,
       banner,
@@ -96,7 +108,7 @@ const updateCategory = async (req, res, next) => {
       return res.status(404).json({ success: false, error: 'Category not found' });
     }
 
-    const { name, description, parentId, seoTitle, seoDescription } = req.body;
+    const { name, description, descriptionSections, parentId, seoTitle, seoDescription } = req.body;
 
     if (name && name !== category.name) {
       category.name = name;
@@ -104,6 +116,15 @@ const updateCategory = async (req, res, next) => {
     }
 
     category.description = description !== undefined ? description : category.description;
+    
+    if (descriptionSections !== undefined) {
+      try {
+        category.descriptionSections = typeof descriptionSections === 'string'
+          ? JSON.parse(descriptionSections)
+          : descriptionSections;
+      } catch (e) { }
+    }
+
     category.seoTitle = seoTitle !== undefined ? seoTitle : category.seoTitle;
     category.seoDescription = seoDescription !== undefined ? seoDescription : category.seoDescription;
     

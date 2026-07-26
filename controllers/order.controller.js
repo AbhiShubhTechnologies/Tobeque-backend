@@ -1,4 +1,5 @@
 const { Order, OrderItem, User, Product, Payment, InventoryLog, AdminLog } = require('../models');
+const { sendOrderConfirmationEmail } = require('../utils/emailService');
 
 // @desc    Get List of Orders
 // @route   GET /api/orders
@@ -257,10 +258,58 @@ const deleteOrder = async (req, res, next) => {
   }
 };
 
+// @desc    Explicitly confirm order and send invoice email
+// @route   POST /api/orders/:id/confirm
+// @access  Private (Admin)
+const confirmOrder = async (req, res, next) => {
+  try {
+    const { sendEmail = true } = req.body;
+    const order = await Order.findById(req.params.id).populate('items');
+
+    if (!order) {
+      return res.status(404).json({ success: false, error: 'Order not found' });
+    }
+
+    order.orderStatus = 'confirmed';
+    await order.save();
+
+    let emailResult = { success: false, reason: 'Email notification disabled' };
+    if (sendEmail) {
+      const emailUser = await User.findById(order.user).select('firstName lastName email phone');
+      const items = await OrderItem.find({ order: order._id });
+      emailResult = await sendOrderConfirmationEmail(
+        order.toJSON(),
+        emailUser,
+        items.map(i => i.toJSON())
+      );
+    }
+
+    await AdminLog.create({
+      adminId: req.admin.id,
+      action: `Confirmed order #${order.orderNumber}${sendEmail ? ' and sent tax invoice email' : ''}`,
+      entityType: 'order',
+      entityId: order.id,
+      ipAddress: req.ip
+    });
+
+    res.json({
+      success: true,
+      message: emailResult.success
+        ? `Order #${order.orderNumber} confirmed and tax invoice emailed successfully!`
+        : `Order #${order.orderNumber} confirmed successfully.`,
+      emailSent: emailResult.success,
+      order
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getOrders,
   getOrderById,
   updateOrderStatus,
+  confirmOrder,
   getInvoiceDetails,
   deleteOrder
 };

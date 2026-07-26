@@ -31,6 +31,8 @@ const storage = new CloudinaryStorage({
       folder = 'tobeque/site';
     } else if (req.originalUrl.includes('profile') || req.originalUrl.includes('customers')) {
       folder = 'tobeque/users';
+    } else if (req.originalUrl.includes('refund-requests')) {
+      folder = 'tobeque/refunds';
     }
 
     return {
