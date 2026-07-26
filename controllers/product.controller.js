@@ -195,7 +195,10 @@ const createProduct = async (req, res, next) => {
       displaySettings,
       imageColors,
       colors,
-      styleItWith
+      styleItWith,
+      show7DayReturn,
+      showFreeShipping,
+      showCodAvailable
     } = req.body;
 
     // Check SKU unique
@@ -255,6 +258,9 @@ const createProduct = async (req, res, next) => {
       isFeatured: isFeatured === 'true' || isFeatured === true,
       isOnSaleSection: isOnSaleSection === 'true' || isOnSaleSection === true,
       isHotRightNow: isHotRightNow === 'true' || isHotRightNow === true,
+      show7DayReturn: show7DayReturn !== undefined ? (show7DayReturn === 'true' || show7DayReturn === true) : true,
+      showFreeShipping: showFreeShipping !== undefined ? (showFreeShipping === 'true' || showFreeShipping === true) : true,
+      showCodAvailable: showCodAvailable !== undefined ? (showCodAvailable === 'true' || showCodAvailable === true) : true,
       hotRightNowMedia,
       thumbnail,
       colors: parsedColors,
@@ -371,7 +377,10 @@ const updateProduct = async (req, res, next) => {
       displaySettings,
       imageColors,
       colors,
-      styleItWith
+      styleItWith,
+      show7DayReturn,
+      showFreeShipping,
+      showCodAvailable
     } = req.body;
 
     console.log("====== DEBUG UPDATE PRODUCT ======");
@@ -416,6 +425,16 @@ const updateProduct = async (req, res, next) => {
     product.callToAction = callToAction !== undefined ? callToAction : product.callToAction;
     product.preFilledMessage = preFilledMessage !== undefined ? preFilledMessage : product.preFilledMessage;
     product.displaySettings = displaySettings !== undefined ? displaySettings : product.displaySettings;
+
+    if (show7DayReturn !== undefined) {
+      product.show7DayReturn = show7DayReturn === 'true' || show7DayReturn === true;
+    }
+    if (showFreeShipping !== undefined) {
+      product.showFreeShipping = showFreeShipping === 'true' || showFreeShipping === true;
+    }
+    if (showCodAvailable !== undefined) {
+      product.showCodAvailable = showCodAvailable === 'true' || showCodAvailable === true;
+    }
 
     if (styleItWith !== undefined) {
       product.styleItWith = Array.isArray(styleItWith) ? styleItWith : (typeof styleItWith === 'string' ? JSON.parse(styleItWith) : []);

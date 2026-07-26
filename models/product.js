@@ -142,7 +142,19 @@ const ProductSchema = new mongoose.Schema({
   styleItWith: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Product'
-  }]
+  }],
+  show7DayReturn: {
+    type: Boolean,
+    default: true
+  },
+  showFreeShipping: {
+    type: Boolean,
+    default: true
+  },
+  showCodAvailable: {
+    type: Boolean,
+    default: true
+  }
 }, {
   timestamps: true,
   toJSON: {
