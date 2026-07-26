@@ -14,6 +14,9 @@ const BannerSchema = new mongoose.Schema({
   linkUrl: {
     type: String
   },
+  bannerLink: {
+    type: String
+  },
   position: {
     type: String,
     enum: ['home_slider', 'promo_top', 'promo_bottom', 'mobile_app', 'promo_banner', 'mobile_banner', 'collection_hero'],

@@ -48,7 +48,14 @@ const getProducts = async (req, res, next) => {
       if (s.includes('pink')) searchTerms.push('rose', 'magenta', 'fuchsia', 'peach');
       if (s.includes('yellow')) searchTerms.push('mustard', 'gold', 'lemon');
 
-      const regexes = searchTerms.map(term => new RegExp(term, 'i'));
+      const escapeRegex = (text) => text.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
+      const regexes = searchTerms.map(term => {
+        try {
+          return new RegExp(escapeRegex(term), 'i');
+        } catch (e) {
+          return new RegExp(term.replace(/[^\w\s]/gi, ''), 'i');
+        }
+      });
 
       where.$or = [
         { name: { $in: regexes } },

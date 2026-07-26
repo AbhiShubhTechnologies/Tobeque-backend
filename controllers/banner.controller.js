@@ -21,7 +21,7 @@ const getBanners = async (req, res, next) => {
 // @access  Private
 const createBanner = async (req, res, next) => {
   try {
-    const { title, subtitle, linkUrl, position, sortOrder, status } = req.body;
+    const { title, subtitle, linkUrl, bannerLink, position, sortOrder, status } = req.body;
 
     let imageUrl = '';
     if (req.file) {
@@ -34,7 +34,8 @@ const createBanner = async (req, res, next) => {
       title,
       subtitle,
       imageUrl,
-      linkUrl,
+      linkUrl: linkUrl || '',
+      bannerLink: bannerLink || '',
       position: position || 'home_slider',
       sortOrder: sortOrder ? parseInt(sortOrder) : 0,
       status: status !== undefined ? status : true
@@ -68,11 +69,12 @@ const updateBanner = async (req, res, next) => {
       return res.status(404).json({ success: false, error: 'Banner not found' });
     }
 
-    const { title, subtitle, linkUrl, position, sortOrder, status } = req.body;
+    const { title, subtitle, linkUrl, bannerLink, position, sortOrder, status } = req.body;
 
     banner.title = title !== undefined ? title : banner.title;
     banner.subtitle = subtitle !== undefined ? subtitle : banner.subtitle;
     banner.linkUrl = linkUrl !== undefined ? linkUrl : banner.linkUrl;
+    banner.bannerLink = bannerLink !== undefined ? bannerLink : banner.bannerLink;
     banner.position = position || banner.position;
     banner.sortOrder = sortOrder ? parseInt(sortOrder) : banner.sortOrder;
     banner.status = status !== undefined ? status : banner.status;
