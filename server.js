@@ -73,6 +73,7 @@ app.use('/api/blogs', require('./routes/blog'));
 app.use('/api/job-postings', require('./routes/jobPosting'));
 app.use('/api/community-styles', require('./routes/communityStyle'));
 app.use('/api/about-us', require('./routes/aboutUs'));
+app.use('/api/contact', require('./routes/contact'));
 
 // Root Status check
 app.get('/api/status', (req, res) => {
