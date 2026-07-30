@@ -29,6 +29,10 @@ const ProductSchema = new mongoose.Schema({
     ref: 'Category',
     default: null
   },
+  additionalCategories: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Category'
+  }],
   brand: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Brand',
@@ -196,5 +200,13 @@ ProductSchema.virtual('reviews', {
   localField: '_id',
   foreignField: 'product'
 });
+
+// Indexes for performance
+ProductSchema.index({ status: 1 });
+ProductSchema.index({ isFeatured: 1 });
+ProductSchema.index({ isOnSaleSection: 1 });
+ProductSchema.index({ isHotRightNow: 1 });
+ProductSchema.index({ category: 1 });
+ProductSchema.index({ additionalCategories: 1 });
 
 module.exports = mongoose.model('Product', ProductSchema);

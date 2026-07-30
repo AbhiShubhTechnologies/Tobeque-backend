@@ -72,11 +72,17 @@ const getProducts = async (req, res, next) => {
     if (category) {
       const mongoose = require('mongoose');
       if (mongoose.Types.ObjectId.isValid(category)) {
-        where.category = category;
+        where.$or = (where.$or || []).concat([
+          { category: category },
+          { additionalCategories: category }
+        ]);
       } else {
         const categoryDoc = await Category.findOne({ name: new RegExp('^' + category + '$', 'i') });
         if (categoryDoc) {
-          where.category = categoryDoc._id;
+          where.$or = (where.$or || []).concat([
+            { category: categoryDoc._id },
+            { additionalCategories: categoryDoc._id }
+          ]);
         } else {
           where.category = null; // force empty result if category not found
         }
@@ -175,6 +181,7 @@ const createProduct = async (req, res, next) => {
       isOnSaleSection,
       isHotRightNow,
       categoryId,
+      additionalCategories,
       brandId,
       variants,
       slug: customSlug,
@@ -244,6 +251,11 @@ const createProduct = async (req, res, next) => {
       parsedStyleItWith = Array.isArray(styleItWith) ? styleItWith : (typeof styleItWith === 'string' ? JSON.parse(styleItWith) : []);
     }
 
+    let parsedAdditionalCategories = [];
+    if (additionalCategories) {
+      parsedAdditionalCategories = Array.isArray(additionalCategories) ? additionalCategories : (typeof additionalCategories === 'string' ? JSON.parse(additionalCategories) : []);
+    }
+
     const product = await Product.create({
       name,
       slug,
@@ -268,6 +280,7 @@ const createProduct = async (req, res, next) => {
       thumbnail,
       colors: parsedColors,
       category: categoryId || null,
+      additionalCategories: parsedAdditionalCategories,
       brand: brandId || null,
       variants: parsedVariants,
       seoTitle,
@@ -362,6 +375,7 @@ const updateProduct = async (req, res, next) => {
       isOnSaleSection,
       isHotRightNow,
       categoryId,
+      additionalCategories,
       brandId,
       variants,
       seoTitle,
@@ -427,6 +441,9 @@ const updateProduct = async (req, res, next) => {
     product.seoKeywords = seoKeywords !== undefined ? seoKeywords : product.seoKeywords;
     product.seoSchema = seoSchema !== undefined ? seoSchema : product.seoSchema;
     product.category = categoryId !== undefined ? (categoryId || null) : product.category;
+    if (additionalCategories !== undefined) {
+      product.additionalCategories = Array.isArray(additionalCategories) ? additionalCategories : (typeof additionalCategories === 'string' ? JSON.parse(additionalCategories) : []);
+    }
     product.brand = brandId !== undefined ? (brandId || null) : product.brand;
     
     product.countdownTimerProfile = countdownTimerProfile !== undefined ? countdownTimerProfile : product.countdownTimerProfile;
