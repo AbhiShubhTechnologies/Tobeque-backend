@@ -217,7 +217,8 @@ const createProduct = async (req, res, next) => {
       styleItWith,
       show7DayReturn,
       showFreeShipping,
-      showCodAvailable
+      showCodAvailable,
+      sizeChart
     } = req.body;
 
     // Check SKU unique
@@ -265,6 +266,11 @@ const createProduct = async (req, res, next) => {
       parsedAdditionalCategories = Array.isArray(additionalCategories) ? additionalCategories : (typeof additionalCategories === 'string' ? JSON.parse(additionalCategories) : []);
     }
 
+    let parsedSizeChart = null;
+    if (sizeChart) {
+      parsedSizeChart = typeof sizeChart === 'string' ? (sizeChart ? JSON.parse(sizeChart) : null) : sizeChart;
+    }
+
     const product = await Product.create({
       name,
       slug,
@@ -310,7 +316,8 @@ const createProduct = async (req, res, next) => {
       callToAction,
       preFilledMessage,
       displaySettings,
-      styleItWith: parsedStyleItWith
+      styleItWith: parsedStyleItWith,
+      sizeChart: parsedSizeChart
     });
 
     // Record stock addition log
@@ -408,7 +415,8 @@ const updateProduct = async (req, res, next) => {
       styleItWith,
       show7DayReturn,
       showFreeShipping,
-      showCodAvailable
+      showCodAvailable,
+      sizeChart
     } = req.body;
 
     console.log("====== DEBUG UPDATE PRODUCT ======");
@@ -477,6 +485,14 @@ const updateProduct = async (req, res, next) => {
 
     if (styleItWith !== undefined) {
       product.styleItWith = Array.isArray(styleItWith) ? styleItWith : (typeof styleItWith === 'string' ? JSON.parse(styleItWith) : []);
+    }
+
+    if (sizeChart !== undefined) {
+      if (!sizeChart || sizeChart === 'null' || sizeChart === 'undefined') {
+        product.sizeChart = null;
+      } else {
+        product.sizeChart = typeof sizeChart === 'string' ? JSON.parse(sizeChart) : sizeChart;
+      }
     }
 
     if (colors !== undefined) {

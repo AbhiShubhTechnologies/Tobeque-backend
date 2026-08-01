@@ -166,6 +166,10 @@ const ProductSchema = new mongoose.Schema({
   showCodAvailable: {
     type: Boolean,
     default: true
+  },
+  sizeChart: {
+    type: mongoose.Schema.Types.Mixed,
+    default: null
   }
 }, {
   timestamps: true,
