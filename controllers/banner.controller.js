@@ -24,16 +24,22 @@ const createBanner = async (req, res, next) => {
     const { title, subtitle, linkUrl, bannerLink, position, sortOrder, status } = req.body;
 
     let imageUrl = '';
-    if (req.file) {
+    if (req.files && req.files.image && req.files.image[0]) {
+      imageUrl = req.files.image[0].path;
+    } else if (req.file) {
       imageUrl = req.file.path;
-    } else {
-      return res.status(400).json({ success: false, error: 'Please upload a banner image file' });
+    }
+
+    let mobileImageUrl = '';
+    if (req.files && req.files.mobileImage && req.files.mobileImage[0]) {
+      mobileImageUrl = req.files.mobileImage[0].path;
     }
 
     const banner = await Banner.create({
       title,
       subtitle,
       imageUrl,
+      mobileImageUrl,
       linkUrl: linkUrl || '',
       bannerLink: bannerLink || '',
       position: position || 'home_slider',
@@ -69,7 +75,7 @@ const updateBanner = async (req, res, next) => {
       return res.status(404).json({ success: false, error: 'Banner not found' });
     }
 
-    const { title, subtitle, linkUrl, bannerLink, position, sortOrder, status } = req.body;
+    const { title, subtitle, linkUrl, bannerLink, position, sortOrder, status, removeImage, removeMobileImage } = req.body;
 
     banner.title = title !== undefined ? title : banner.title;
     banner.subtitle = subtitle !== undefined ? subtitle : banner.subtitle;
@@ -79,12 +85,38 @@ const updateBanner = async (req, res, next) => {
     banner.sortOrder = sortOrder ? parseInt(sortOrder) : banner.sortOrder;
     banner.status = status !== undefined ? status : banner.status;
 
-    if (req.file) {
+    if (removeImage === 'true' || removeImage === true) {
+      if (banner.imageUrl) {
+        await deleteCloudinaryAsset(banner.imageUrl);
+        banner.imageUrl = '';
+      }
+    }
+
+    if (removeMobileImage === 'true' || removeMobileImage === true) {
+      if (banner.mobileImageUrl) {
+        await deleteCloudinaryAsset(banner.mobileImageUrl);
+        banner.mobileImageUrl = '';
+      }
+    }
+
+    if (req.files && req.files.image && req.files.image[0]) {
       // Delete old image from Cloudinary before replacing
       if (banner.imageUrl) {
         await deleteCloudinaryAsset(banner.imageUrl);
       }
+      banner.imageUrl = req.files.image[0].path;
+    } else if (req.file) {
+      if (banner.imageUrl) {
+        await deleteCloudinaryAsset(banner.imageUrl);
+      }
       banner.imageUrl = req.file.path;
+    }
+
+    if (req.files && req.files.mobileImage && req.files.mobileImage[0]) {
+      if (banner.mobileImageUrl) {
+        await deleteCloudinaryAsset(banner.mobileImageUrl);
+      }
+      banner.mobileImageUrl = req.files.mobileImage[0].path;
     }
 
     await banner.save();
@@ -120,12 +152,16 @@ const deleteBanner = async (req, res, next) => {
     const bannerTitle = banner.title || 'Untitled';
     const bannerId = banner.id;
     const bannerImageUrl = banner.imageUrl;
+    const bannerMobileImageUrl = banner.mobileImageUrl;
 
     await banner.deleteOne();
 
     // Clean up image from Cloudinary
     if (bannerImageUrl) {
       await deleteCloudinaryAsset(bannerImageUrl);
+    }
+    if (bannerMobileImageUrl) {
+      await deleteCloudinaryAsset(bannerMobileImageUrl);
     }
 
     await AdminLog.create({

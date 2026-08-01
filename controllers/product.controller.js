@@ -77,7 +77,12 @@ const getProducts = async (req, res, next) => {
           { additionalCategories: category }
         ]);
       } else {
-        const categoryDoc = await Category.findOne({ name: new RegExp('^' + category + '$', 'i') });
+        const categoryDoc = await Category.findOne({ 
+          $or: [
+            { slug: category },
+            { name: new RegExp('^' + category + '$', 'i') }
+          ]
+        });
         if (categoryDoc) {
           where.$or = (where.$or || []).concat([
             { category: categoryDoc._id },
@@ -140,8 +145,12 @@ const getProducts = async (req, res, next) => {
 // @access  Private
 const getProductById = async (req, res, next) => {
   try {
-    const product = await Product.findById(req.params.id)
-      .populate('category', 'id name')
+    const mongoose = require('mongoose');
+    const param = req.params.id;
+    const query = mongoose.Types.ObjectId.isValid(param) ? { _id: param } : { slug: param };
+
+    const product = await Product.findOne(query)
+      .populate('category', 'id name slug')
       .populate('brand', 'id name')
       .populate('images', 'id imageUrl color')
       .populate('styleItWith', 'id name price thumbnail slug');

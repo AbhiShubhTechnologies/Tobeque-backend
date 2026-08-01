@@ -10,8 +10,8 @@ router.get('/', getBanners);
 // Protected Admin Routes
 router.use(protect);
 
-router.post('/', upload.single('image'), createBanner);
-router.put('/:id', upload.single('image'), updateBanner);
+router.post('/', upload.fields([{ name: 'image', maxCount: 1 }, { name: 'mobileImage', maxCount: 1 }]), createBanner);
+router.put('/:id', upload.fields([{ name: 'image', maxCount: 1 }, { name: 'mobileImage', maxCount: 1 }]), updateBanner);
 router.delete('/:id', authorize('superadmin', 'manager'), deleteBanner);
 
 module.exports = router;

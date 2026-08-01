@@ -8,8 +8,10 @@ const BannerSchema = new mongoose.Schema({
     type: String
   },
   imageUrl: {
-    type: String,
-    required: true
+    type: String
+  },
+  mobileImageUrl: {
+    type: String
   },
   linkUrl: {
     type: String
