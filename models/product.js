@@ -107,6 +107,10 @@ const ProductSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  imageAltTag: {
+    type: String,
+    default: ''
+  },
   countdownEvergreen: {
     type: Boolean,
     default: false

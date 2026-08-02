@@ -69,7 +69,7 @@ const getProducts = async (req, res, next) => {
       ];
     }
 
-    if (category) {
+    if (category && category.toString().toLowerCase() !== 'all') {
       const mongoose = require('mongoose');
       if (mongoose.Types.ObjectId.isValid(category)) {
         where.$or = (where.$or || []).concat([
@@ -198,6 +198,7 @@ const createProduct = async (req, res, next) => {
       seoDescription,
       seoKeywords,
       seoSchema,
+      imageAltTag,
       countdownEvergreen,
       restartCountdownAfter,
       countdownTimerProfile,
@@ -302,6 +303,7 @@ const createProduct = async (req, res, next) => {
       seoDescription,
       seoKeywords,
       seoSchema,
+      imageAltTag,
       countdownEvergreen: countdownEvergreen === 'true' || countdownEvergreen === true,
       restartCountdownAfter: restartCountdownAfter ? parseInt(restartCountdownAfter) : null,
       countdownTimerProfile,
@@ -433,7 +435,7 @@ const updateProduct = async (req, res, next) => {
       product.sku = sku;
     }
 
-    const { slug: customSlug, seoKeywords, seoSchema } = req.body;
+    const { slug: customSlug, seoKeywords, seoSchema, imageAltTag } = req.body;
 
     if (customSlug && customSlug !== product.slug) {
       product.slug = slugify(customSlug);
@@ -457,6 +459,7 @@ const updateProduct = async (req, res, next) => {
     product.seoDescription = seoDescription !== undefined ? seoDescription : product.seoDescription;
     product.seoKeywords = seoKeywords !== undefined ? seoKeywords : product.seoKeywords;
     product.seoSchema = seoSchema !== undefined ? seoSchema : product.seoSchema;
+    product.imageAltTag = imageAltTag !== undefined ? imageAltTag : product.imageAltTag;
     product.category = categoryId !== undefined ? (categoryId || null) : product.category;
     if (additionalCategories !== undefined) {
       product.additionalCategories = Array.isArray(additionalCategories) ? additionalCategories : (typeof additionalCategories === 'string' ? JSON.parse(additionalCategories) : []);
