@@ -46,6 +46,18 @@ const UserSchema = new mongoose.Schema({
   zipCode: {
     type: String
   },
+  shippingAddress: {
+    type: String
+  },
+  shippingCity: {
+    type: String
+  },
+  shippingState: {
+    type: String
+  },
+  shippingZipCode: {
+    type: String
+  },
   gender: {
     type: String
   },

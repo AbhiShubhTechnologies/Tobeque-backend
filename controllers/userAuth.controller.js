@@ -128,6 +128,10 @@ const verifyOtp = async (req, res, next) => {
         state: user.state,
         zipCode: user.zipCode,
         gender: user.gender,
+        shippingAddress: user.shippingAddress,
+        shippingCity: user.shippingCity,
+        shippingState: user.shippingState,
+        shippingZipCode: user.shippingZipCode,
         profilePhoto: user.profilePhoto
       }
     });
@@ -246,6 +250,11 @@ const updateUserProfile = async (req, res, next) => {
     if (req.body.state !== undefined) user.state = req.body.state;
     if (req.body.zipCode !== undefined) user.zipCode = req.body.zipCode;
     if (req.body.gender !== undefined) user.gender = req.body.gender;
+    
+    if (req.body.shippingAddress !== undefined) user.shippingAddress = req.body.shippingAddress;
+    if (req.body.shippingCity !== undefined) user.shippingCity = req.body.shippingCity;
+    if (req.body.shippingState !== undefined) user.shippingState = req.body.shippingState;
+    if (req.body.shippingZipCode !== undefined) user.shippingZipCode = req.body.shippingZipCode;
 
     await user.save();
 
@@ -263,6 +272,10 @@ const updateUserProfile = async (req, res, next) => {
         state: user.state,
         zipCode: user.zipCode,
         gender: user.gender,
+        shippingAddress: user.shippingAddress,
+        shippingCity: user.shippingCity,
+        shippingState: user.shippingState,
+        shippingZipCode: user.shippingZipCode,
         profilePhoto: user.profilePhoto
       }
     });
