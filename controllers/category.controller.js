@@ -108,11 +108,17 @@ const updateCategory = async (req, res, next) => {
       return res.status(404).json({ success: false, error: 'Category not found' });
     }
 
-    const { name, description, descriptionSections, parentId, seoTitle, seoDescription } = req.body;
+    const { name, slug, description, descriptionSections, parentId, seoTitle, seoDescription } = req.body;
 
     if (name && name !== category.name) {
       category.name = name;
-      category.slug = slugify(name) + '-' + Math.floor(Math.random() * 1000);
+      if (!slug) {
+        category.slug = slugify(name) + '-' + Math.floor(Math.random() * 1000);
+      }
+    }
+
+    if (slug && slug !== category.slug) {
+      category.slug = slugify(slug);
     }
 
     category.description = description !== undefined ? description : category.description;
