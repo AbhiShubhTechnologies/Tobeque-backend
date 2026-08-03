@@ -37,7 +37,7 @@ const getProducts = async (req, res, next) => {
     const where = {};
 
     if (search) {
-      const searchTerms = [search];
+      let searchTerms = [search];
       const s = search.toLowerCase();
       if (s.includes('blue')) searchTerms.push('navy', 'teal', 'cyan', 'denim', 'sapphire', 'azure');
       if (s.includes('red')) searchTerms.push('maroon', 'burgundy', 'wine', 'crimson', 'ruby');
@@ -48,6 +48,14 @@ const getProducts = async (req, res, next) => {
       if (s.includes('pink')) searchTerms.push('rose', 'magenta', 'fuchsia', 'peach');
       if (s.includes('yellow')) searchTerms.push('mustard', 'gold', 'lemon');
 
+      // Add singular/plural variants for better matching (e.g. "tops" -> "top")
+      if (s.endsWith('s')) searchTerms.push(s.slice(0, -1));
+      if (s.endsWith('es')) searchTerms.push(s.slice(0, -2));
+      if (!s.endsWith('s')) searchTerms.push(s + 's');
+
+      // Remove duplicates
+      searchTerms = [...new Set(searchTerms)];
+
       const escapeRegex = (text) => text.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
       const regexes = searchTerms.map(term => {
         try {
@@ -57,8 +65,18 @@ const getProducts = async (req, res, next) => {
         }
       });
 
+      // Find matching categories by name or slug to include in product search
+      const matchingCats = await Category.find({
+        $or: [
+          { name: { $in: regexes } },
+          { slug: { $in: regexes } }
+        ]
+      }).select('_id');
+      const catIds = matchingCats.map(c => c._id);
+
       where.$or = [
         { name: { $in: regexes } },
+        { slug: { $in: regexes } },
         { sku: { $in: regexes } },
         { barcode: { $in: regexes } },
         { shortDescription: { $in: regexes } },
@@ -67,6 +85,11 @@ const getProducts = async (req, res, next) => {
         { 'variants.color': { $in: regexes } },
         { 'variants.Color': { $in: regexes } }
       ];
+      
+      if (catIds.length > 0) {
+        where.$or.push({ category: { $in: catIds } });
+        where.$or.push({ additionalCategories: { $in: catIds } });
+      }
     }
 
     if (category && category.toString().toLowerCase() !== 'all') {
