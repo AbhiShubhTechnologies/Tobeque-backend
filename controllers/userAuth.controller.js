@@ -42,9 +42,9 @@ const sendOtp = async (req, res, next) => {
     if (!user) {
       user = await User.create({
         phone: normalizedPhone,
-        firstName: 'Guest',
-        lastName: 'User',
-        email: `${normalizedPhone}@guest.local`,
+        firstName: '',
+        lastName: '',
+        email: '',
         password: generatedOtp,
         status: 'active'
       });
@@ -372,7 +372,7 @@ const createOrder = async (req, res, next) => {
 
     // Format address object to match Admin OrderDetail.jsx expectation
     const finalAddress = typeof shippingAddress === 'object' ? shippingAddress : {
-      name: customerName || `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() || 'Customer',
+      name: customerName || `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() || '',
       phone: customerPhone || req.user.phone || '',
       street: shippingAddress || req.user.address || 'N/A',
       city: req.user.city || '',
@@ -658,7 +658,7 @@ const verifyRazorpayPayment = async (req, res, next) => {
     const totalAmount = subtotal - discountAmount + shippingCost;
 
     const finalAddress = typeof shippingAddress === 'object' ? shippingAddress : {
-      name: customerName || `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() || 'Customer',
+      name: customerName || `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() || '',
       phone: customerPhone || req.user.phone || '',
       street: shippingAddress || req.user.address || 'N/A',
       city: req.user.city || '', state: req.user.state || '', zip: req.user.zipCode || '', country: 'India'

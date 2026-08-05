@@ -427,8 +427,8 @@ const sendOrderConfirmationEmail = async (order, user, items = []) => {
   try {
     // Determine recipient email
     const toEmail = user?.email;
-    if (!toEmail || toEmail.endsWith('@guest.local')) {
-      console.log(`[Email] Skipping — no valid email for user ${user?.id || 'unknown'}`);
+    if (!toEmail || !toEmail.trim()) {
+      console.log(`[Email] Skipping — no email address for user ${user?.id || 'unknown'}`);
       return { success: false, reason: 'No valid email address' };
     }
 

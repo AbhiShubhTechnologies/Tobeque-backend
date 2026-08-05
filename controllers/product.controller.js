@@ -176,7 +176,8 @@ const getProductById = async (req, res, next) => {
       .populate('category', 'id name slug')
       .populate('brand', 'id name')
       .populate('images', 'id imageUrl color')
-      .populate('styleItWith', 'id name price thumbnail slug');
+      .populate('styleItWith', 'id name price thumbnail slug')
+      .populate('relatedCategories', 'id name slug');
 
     if (!product) {
       return res.status(404).json({ success: false, error: 'Product not found' });
@@ -239,6 +240,7 @@ const createProduct = async (req, res, next) => {
       imageColors,
       colors,
       styleItWith,
+      relatedCategories,
       show7DayReturn,
       showFreeShipping,
       showCodAvailable,
@@ -303,6 +305,11 @@ const createProduct = async (req, res, next) => {
       parsedCustomSections = typeof customSections === 'string' ? JSON.parse(customSections) : customSections;
     }
 
+    let parsedRelatedCategories = [];
+    if (relatedCategories) {
+      parsedRelatedCategories = Array.isArray(relatedCategories) ? relatedCategories : (typeof relatedCategories === 'string' ? JSON.parse(relatedCategories) : []);
+    }
+
     const product = await Product.create({
       name,
       slug,
@@ -350,6 +357,7 @@ const createProduct = async (req, res, next) => {
       preFilledMessage,
       displaySettings,
       styleItWith: parsedStyleItWith,
+      relatedCategories: parsedRelatedCategories,
       sizeChart: parsedSizeChart,
       fabricCare,
       shippingReturns,
@@ -449,6 +457,7 @@ const updateProduct = async (req, res, next) => {
       imageColors,
       colors,
       styleItWith,
+      relatedCategories,
       show7DayReturn,
       showFreeShipping,
       showCodAvailable,
@@ -525,6 +534,10 @@ const updateProduct = async (req, res, next) => {
 
     if (styleItWith !== undefined) {
       product.styleItWith = Array.isArray(styleItWith) ? styleItWith : (typeof styleItWith === 'string' ? JSON.parse(styleItWith) : []);
+    }
+
+    if (relatedCategories !== undefined) {
+      product.relatedCategories = Array.isArray(relatedCategories) ? relatedCategories : (typeof relatedCategories === 'string' ? JSON.parse(relatedCategories) : []);
     }
 
     if (fabricCare !== undefined) {
