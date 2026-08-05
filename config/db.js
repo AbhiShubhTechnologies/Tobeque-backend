@@ -1,7 +1,11 @@
 const mongoose = require('mongoose');
 require('dotenv').config();
 
-const mongoUri = process.env.MONGO_URI || 'mongodb+srv://dixitdesai809_db_user:ZTxCAFxdmnCEmgzZ@tobeque.nsvhk6i.mongodb.net/tobeque_ecommerce?appName=Tobeque';
+const mongoUri = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/tobeque_ecommerce';
+
+if (!process.env.MONGO_URI) {
+  console.warn('⚠️ MONGO_URI is not set in .env. Falling back to local MongoDB (mongodb://127.0.0.1:27017/tobeque_ecommerce).');
+}
 
 const testConnection = async () => {
   try {

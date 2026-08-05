@@ -4,8 +4,8 @@ const csv = require('csv-parser');
 const mongoose = require('mongoose');
 const { Product, Category, Brand, ProductImage } = require('../models');
 
-// Hardcoded live Atlas URI as requested
-const MONGO_URI = 'mongodb+srv://dixitdesai809_db_user:ZTxCAFxdmnCEmgzZ@tobeque.nsvhk6i.mongodb.net/tobeque_ecommerce?appName=Tobeque';
+require('dotenv').config();
+const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/tobeque_ecommerce';
 
 const importProducts = async () => {
   try {
