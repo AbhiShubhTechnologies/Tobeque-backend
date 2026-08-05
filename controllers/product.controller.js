@@ -242,7 +242,10 @@ const createProduct = async (req, res, next) => {
       show7DayReturn,
       showFreeShipping,
       showCodAvailable,
-      sizeChart
+      sizeChart,
+      fabricCare,
+      shippingReturns,
+      customSections
     } = req.body;
 
     // Check SKU unique
@@ -295,6 +298,11 @@ const createProduct = async (req, res, next) => {
       parsedSizeChart = typeof sizeChart === 'string' ? (sizeChart ? JSON.parse(sizeChart) : null) : sizeChart;
     }
 
+    let parsedCustomSections = [];
+    if (customSections) {
+      parsedCustomSections = typeof customSections === 'string' ? JSON.parse(customSections) : customSections;
+    }
+
     const product = await Product.create({
       name,
       slug,
@@ -342,7 +350,10 @@ const createProduct = async (req, res, next) => {
       preFilledMessage,
       displaySettings,
       styleItWith: parsedStyleItWith,
-      sizeChart: parsedSizeChart
+      sizeChart: parsedSizeChart,
+      fabricCare,
+      shippingReturns,
+      customSections: parsedCustomSections
     });
 
     // Record stock addition log
@@ -441,7 +452,10 @@ const updateProduct = async (req, res, next) => {
       show7DayReturn,
       showFreeShipping,
       showCodAvailable,
-      sizeChart
+      sizeChart,
+      fabricCare,
+      shippingReturns,
+      customSections
     } = req.body;
 
     console.log("====== DEBUG UPDATE PRODUCT ======");
@@ -511,6 +525,18 @@ const updateProduct = async (req, res, next) => {
 
     if (styleItWith !== undefined) {
       product.styleItWith = Array.isArray(styleItWith) ? styleItWith : (typeof styleItWith === 'string' ? JSON.parse(styleItWith) : []);
+    }
+
+    if (fabricCare !== undefined) {
+      product.fabricCare = fabricCare;
+    }
+
+    if (shippingReturns !== undefined) {
+      product.shippingReturns = shippingReturns;
+    }
+
+    if (customSections !== undefined) {
+      product.customSections = typeof customSections === 'string' ? JSON.parse(customSections) : customSections;
     }
 
     if (sizeChart !== undefined) {

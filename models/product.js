@@ -24,6 +24,18 @@ const ProductSchema = new mongoose.Schema({
   fullDescription: {
     type: String
   },
+  fabricCare: {
+    type: String,
+    default: ''
+  },
+  shippingReturns: {
+    type: String,
+    default: ''
+  },
+  customSections: [{
+    title: { type: String, default: '' },
+    content: { type: String, default: '' }
+  }],
   category: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Category',

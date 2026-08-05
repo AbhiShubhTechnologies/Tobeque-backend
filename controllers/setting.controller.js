@@ -70,7 +70,7 @@ const getPublicSettings = async (req, res, next) => {
     const settingsList = await Setting.find({
       key: { $in: [
         'storeName', 'storeCurrency', 'deliveryEstimateMin', 'deliveryEstimateMax',
-        'shippingFallbackRate', 'freeShippingThreshold', 'codFee'
+        'shippingFallbackRate', 'freeShippingThreshold', 'codFee', 'shippingReturnsText'
       ]}
     });
     
