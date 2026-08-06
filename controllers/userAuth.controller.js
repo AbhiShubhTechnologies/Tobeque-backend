@@ -394,7 +394,7 @@ const createOrder = async (req, res, next) => {
       shippingCost,
       totalAmount,
       orderStatus: 'pending',
-      paymentStatus: paymentMethod === 'cod' ? 'pending' : 'paid',
+      paymentStatus: (paymentMethod === 'cod' && totalAmount > 0) ? 'pending' : 'paid',
       paymentMethod: paymentMethod || 'cod',
       shippingStatus: 'pending',
       shippingAddress: addressString,
@@ -499,20 +499,11 @@ const getRazorpayConfig = (req, res, next) => {
 // @access  Private (user)
 const createRazorpayOrder = async (req, res, next) => {
   try {
-    const { items, couponCode } = req.body;
+    const { items, couponCode, shippingCost: clientShippingCost } = req.body;
 
     if (!items || items.length === 0) {
       return res.status(400).json({ success: false, error: 'No items in order' });
     }
-
-    if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
-      return res.status(500).json({ success: false, error: 'Razorpay keys not configured on server.' });
-    }
-
-    const razorpay = new Razorpay({
-      key_id: process.env.RAZORPAY_KEY_ID,
-      key_secret: process.env.RAZORPAY_KEY_SECRET,
-    });
 
     let subtotal = 0;
     
@@ -528,8 +519,8 @@ const createRazorpayOrder = async (req, res, next) => {
     let discountAmount = 0;
     if (couponCode) {
       const codeUpper = couponCode.toString().toUpperCase().trim();
-      const coupon = await Coupon.findOne({ code: codeUpper, status: true });
-      if (coupon) {
+      const coupon = await Coupon.findOne({ code: codeUpper });
+      if (coupon && coupon.status) {
         const now = new Date();
         const isStarted = !coupon.startDate || new Date(coupon.startDate) <= now;
         const isNotExpired = !coupon.expiryDate || new Date(coupon.expiryDate) >= now;
@@ -547,7 +538,28 @@ const createRazorpayOrder = async (req, res, next) => {
       }
     }
 
-    const totalAmount = subtotal - discountAmount;
+    const shippingCost = parseFloat(clientShippingCost) || 0;
+    const totalAmount = Math.max(0, subtotal - discountAmount + shippingCost);
+
+    // If total amount is 0 (e.g. 100% discount with free shipping), Razorpay cannot process a ₹0 transaction.
+    if (totalAmount <= 0) {
+      return res.json({
+        success: true,
+        isZeroAmount: true,
+        amount: 0,
+        currency: 'INR'
+      });
+    }
+
+    if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+      return res.status(500).json({ success: false, error: 'Razorpay keys not configured on server.' });
+    }
+
+    const razorpay = new Razorpay({
+      key_id: process.env.RAZORPAY_KEY_ID,
+      key_secret: process.env.RAZORPAY_KEY_SECRET,
+    });
+
     const amountInPaise = Math.round(totalAmount * 100);
 
     const options = {
@@ -588,31 +600,26 @@ const verifyRazorpayPayment = async (req, res, next) => {
       notes
     } = req.body;
 
-    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
-      return res.status(400).json({ success: false, error: 'Missing payment details' });
+    const isZeroAmountOrder = (razorpay_order_id === 'order_zero_discount' || razorpay_payment_id === 'pay_zero_discount');
+
+    if (!isZeroAmountOrder) {
+      if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+        return res.status(400).json({ success: false, error: 'Missing payment details' });
+      }
+
+      const secret = process.env.RAZORPAY_KEY_SECRET;
+      
+      const shasum = crypto.createHmac('sha256', secret);
+      shasum.update(`${razorpay_order_id}|${razorpay_payment_id}`);
+      const digest = shasum.digest('hex');
+
+      if (digest !== razorpay_signature) {
+        return res.status(400).json({ success: false, error: 'Payment signature verification failed. Transaction is not legit!' });
+      }
     }
-
-    const secret = process.env.RAZORPAY_KEY_SECRET;
-    
-    const shasum = crypto.createHmac('sha256', secret);
-    shasum.update(`${razorpay_order_id}|${razorpay_payment_id}`);
-    const digest = shasum.digest('hex');
-
-    if (digest !== razorpay_signature) {
-      return res.status(400).json({ success: false, error: 'Payment signature verification failed. Transaction is not legit!' });
-    }
-
-    // Since signature matches, payment is legit. We inject the proper paymentMethod and call the standard createOrder logic.
-    // Instead of duplicating 150 lines, we can mock req.body.paymentMethod and call createOrder directly!
-    // But createOrder will call res.json() or next(error).
-    // So we can wrap res to intercept the success response and add our razorpay updates.
 
     req.body.paymentMethod = 'online';
 
-    // We can just execute the logic. To avoid duplicating, let's extract the core of createOrder or just duplicate.
-    // Given the simplicity, duplicating the DB creation block is safest to not break COD flow with res.json interception.
-    
-    // -- BEGIN DUPLICATED ORDER CREATION LOGIC --
     const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
     const randomStr = Math.floor(1000 + Math.random() * 9000);
     const orderNumber = `ORD-${dateStr}-${randomStr}`;
@@ -641,8 +648,8 @@ const verifyRazorpayPayment = async (req, res, next) => {
     let appliedCouponCode = null;
     if (couponCode) {
       const codeUpper = couponCode.toString().toUpperCase().trim();
-      const coupon = await Coupon.findOne({ code: codeUpper, status: true });
-      if (coupon) {
+      const coupon = await Coupon.findOne({ code: codeUpper });
+      if (coupon && coupon.status) {
         appliedCouponCode = coupon.code;
         if (coupon.type === 'percentage') discountAmount = (subtotal * parseFloat(coupon.discountValue)) / 100;
         else discountAmount = parseFloat(coupon.discountValue);
@@ -655,7 +662,7 @@ const verifyRazorpayPayment = async (req, res, next) => {
     const discountRatio = subtotal > 0 ? (discountAmount / subtotal) : 0;
     const finalTaxAmount = totalTaxAmount * (1 - discountRatio);
     const shippingCost = parseFloat(req.body.shippingCost) || 0;
-    const totalAmount = subtotal - discountAmount + shippingCost;
+    const totalAmount = Math.max(0, subtotal - discountAmount + shippingCost);
 
     const finalAddress = typeof shippingAddress === 'object' ? shippingAddress : {
       name: customerName || `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() || '',
@@ -672,8 +679,8 @@ const verifyRazorpayPayment = async (req, res, next) => {
       shippingStatus: 'pending',
       shippingAddress: JSON.stringify(finalAddress), billingAddress: JSON.stringify(finalBillingAddress),
       discountAmount, taxAmount: finalTaxAmount, couponCode: appliedCouponCode, notes,
-      razorpayOrderId: razorpay_order_id,
-      razorpayPaymentId: razorpay_payment_id
+      razorpayOrderId: isZeroAmountOrder ? 'order_zero_discount' : razorpay_order_id,
+      razorpayPaymentId: isZeroAmountOrder ? 'pay_zero_discount' : razorpay_payment_id
     });
 
     for (const pItem of processedItems) {
@@ -688,9 +695,6 @@ const verifyRazorpayPayment = async (req, res, next) => {
         await productToUpdate.save();
       }
     }
-
-    // Order created successfully — email will be sent when admin confirms the order.
-    // -- END DUPLICATED LOGIC --
 
     res.status(201).json({
       success: true,
