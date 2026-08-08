@@ -94,11 +94,19 @@ const startServer = async () => {
     await testConnection();
 
     // 2. Bind port and start listening
-    app.listen(PORT, () => {
+    const server = app.listen(PORT, () => {
       console.log(`===================================================`);
       console.log(`   SERVER IS RUNNING IN ${(process.env.NODE_ENV || 'development').toUpperCase()} MODE`);
       console.log(`   API Listening at: http://localhost:${PORT}`);
       console.log(`===================================================`);
+    });
+
+    server.on('error', (err) => {
+      if (err.code === 'EADDRINUSE') {
+        console.error(`\n❌ Error: Port ${PORT} is already in use by another process.`);
+        console.error(`👉 Stop the existing process or run: npx kill-port ${PORT}\n`);
+        process.exit(1);
+      }
     });
   } catch (error) {
     console.error('Failed to start server:', error);
