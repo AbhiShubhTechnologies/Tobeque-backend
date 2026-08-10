@@ -25,7 +25,7 @@ const getCategories = async (req, res, next) => {
         path: 'subcategories',
         populate: { path: 'subcategories' }
       })
-      .sort({ name: 1 });
+      .sort({ createdAt: 1 });
 
     res.json({
       success: true,
