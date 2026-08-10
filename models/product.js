@@ -99,6 +99,10 @@ const ProductSchema = new mongoose.Schema({
   thumbnail: {
     type: String
   },
+  thumbnailColor: {
+    type: String,
+    default: ''
+  },
   colors: [{
     type: String
   }],

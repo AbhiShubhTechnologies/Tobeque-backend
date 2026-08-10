@@ -332,6 +332,7 @@ const createProduct = async (req, res, next) => {
       showCodAvailable: showCodAvailable !== undefined ? (showCodAvailable === 'true' || showCodAvailable === true) : true,
       hotRightNowMedia,
       thumbnail,
+      thumbnailColor: req.body.thumbnailColor || '',
       colors: parsedColors,
       category: categoryId || null,
       additionalCategories: parsedAdditionalCategories,
@@ -615,6 +616,11 @@ const updateProduct = async (req, res, next) => {
         await deleteCloudinaryAsset(product.thumbnail);
       }
       product.thumbnail = req.files.thumbnail[0].path;
+    }
+
+    // Always update thumbnailColor if provided
+    if (req.body.thumbnailColor !== undefined) {
+      product.thumbnailColor = req.body.thumbnailColor || '';
     }
 
     if (req.files && req.files.hotRightNowMedia) {
