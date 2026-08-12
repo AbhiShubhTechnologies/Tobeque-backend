@@ -26,6 +26,10 @@ const AboutUsSchema = new mongoose.Schema({
     type: String,
     default: 'Founded with a love for street style, Tobeque has grown into a community.'
   },
+  ourStoryText2: {
+    type: String,
+    default: ''
+  },
   stats: [{
     label: String,
     value: String
