@@ -23,6 +23,9 @@ const BlogSchema = new mongoose.Schema({
   image: {
     type: String
   },
+  imageAltTag: {
+    type: String
+  },
   status: {
     type: String,
     enum: ['draft', 'published'],
@@ -36,6 +39,12 @@ const BlogSchema = new mongoose.Schema({
     type: String
   },
   seoDescription: {
+    type: String
+  },
+  seoKeywords: {
+    type: String
+  },
+  seoSchema: {
     type: String
   }
 }, {
