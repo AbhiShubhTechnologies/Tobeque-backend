@@ -22,6 +22,10 @@ const AboutUsSchema = new mongoose.Schema({
     type: String,
     default: 'To be the leading fashion destination for youth.'
   },
+  ourStoryTitle: {
+    type: String,
+    default: 'Our Story'
+  },
   ourStoryText: {
     type: String,
     default: 'Founded with a love for street style, Tobeque has grown into a community.'
