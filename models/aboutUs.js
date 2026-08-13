@@ -30,6 +30,16 @@ const AboutUsSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  extraSections: [{
+    title: {
+      type: String,
+      default: ''
+    },
+    description: {
+      type: String,
+      default: ''
+    }
+  }],
   stats: [{
     label: String,
     value: String

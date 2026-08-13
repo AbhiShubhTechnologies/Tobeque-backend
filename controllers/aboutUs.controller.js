@@ -40,6 +40,15 @@ exports.updateAboutUs = async (req, res, next) => {
       }
     }
 
+    // Parse extraSections if sent as string (from FormData)
+    if (req.body.extraSections && typeof req.body.extraSections === 'string') {
+      try {
+        req.body.extraSections = JSON.parse(req.body.extraSections);
+      } catch (err) {
+        req.body.extraSections = [];
+      }
+    }
+
     let aboutUs = await AboutUs.findOne();
     if (!aboutUs) {
       aboutUs = await AboutUs.create(req.body);
