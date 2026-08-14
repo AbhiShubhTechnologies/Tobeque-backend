@@ -1,45 +1,45 @@
 const multer = require('multer');
 const path = require('path');
-const cloudinary = require('cloudinary').v2;
-const { CloudinaryStorage } = require('multer-storage-cloudinary');
-require('dotenv').config();
+const fs = require('fs');
 
-// Configure Cloudinary
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET
-});
-
-// Configure Storage
-const storage = new CloudinaryStorage({
-  cloudinary: cloudinary,
-  params: async (req, file) => {
-    let folder = 'tobeque/misc';
+// Configure Disk Storage
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    let folder = 'uploads/misc';
     
     if (req.originalUrl.includes('products')) {
-      folder = 'tobeque/products';
+      folder = 'uploads/products';
     } else if (req.originalUrl.includes('categories')) {
-      folder = 'tobeque/categories';
+      folder = 'uploads/categories';
     } else if (req.originalUrl.includes('banners')) {
-      folder = 'tobeque/banners';
+      folder = 'uploads/banners';
     } else if (req.originalUrl.includes('season-collection')) {
-      folder = 'tobeque/season';
+      folder = 'uploads/season';
     } else if (req.originalUrl.includes('blogs')) {
-      folder = 'tobeque/blogs';
+      folder = 'uploads/blogs';
     } else if (req.originalUrl.includes('settings') || req.originalUrl.includes('site')) {
-      folder = 'tobeque/site';
+      folder = 'uploads/site';
     } else if (req.originalUrl.includes('profile') || req.originalUrl.includes('customers')) {
-      folder = 'tobeque/users';
+      folder = 'uploads/users';
     } else if (req.originalUrl.includes('refund-requests')) {
-      folder = 'tobeque/refunds';
+      folder = 'uploads/refunds';
     }
 
-    return {
-      folder: folder,
-      resource_type: 'auto', // Allows both images and videos
-      public_id: `${file.fieldname}-${Date.now()}-${Math.round(Math.random() * 1e9)}`,
-    };
+    const fullPath = path.join(__dirname, '..', folder);
+    if (!fs.existsSync(fullPath)) {
+      fs.mkdirSync(fullPath, { recursive: true });
+    }
+
+    // Attach target subfolder to req for path normalization
+    req._uploadSubfolder = folder;
+
+    cb(null, fullPath);
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    const cleanName = path.basename(file.originalname, ext).replace(/[^a-zA-Z0-9_-]/g, '_');
+    const uniqueFilename = `${cleanName}-${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`;
+    cb(null, uniqueFilename);
   }
 });
 
@@ -56,11 +56,65 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
-// Initialize Multer
-const upload = multer({
+const multerUpload = multer({
   storage: storage,
   limits: { fileSize: 50 * 1024 * 1024 }, // 50 MB Max
   fileFilter: fileFilter
 });
+
+// Helper to convert full OS disk path to relative web path (/uploads/...)
+const normalizeFilePaths = (req) => {
+  const normalize = (file) => {
+    if (file && file.filename) {
+      const subfolder = req._uploadSubfolder || 'uploads/misc';
+      file.path = `/${subfolder}/${file.filename}`.replace(/\\/g, '/');
+    }
+  };
+
+  if (req.file) {
+    normalize(req.file);
+  }
+  if (req.files) {
+    if (Array.isArray(req.files)) {
+      req.files.forEach(normalize);
+    } else if (typeof req.files === 'object') {
+      Object.values(req.files).forEach(fileArr => {
+        if (Array.isArray(fileArr)) fileArr.forEach(normalize);
+      });
+    }
+  }
+};
+
+// Wrap multer middleware methods to automatically normalize file paths
+const upload = {
+  single: (fieldname) => (req, res, next) => {
+    multerUpload.single(fieldname)(req, res, (err) => {
+      if (err) return next(err);
+      normalizeFilePaths(req);
+      next();
+    });
+  },
+  array: (fieldname, maxCount) => (req, res, next) => {
+    multerUpload.array(fieldname, maxCount)(req, res, (err) => {
+      if (err) return next(err);
+      normalizeFilePaths(req);
+      next();
+    });
+  },
+  fields: (fields) => (req, res, next) => {
+    multerUpload.fields(fields)(req, res, (err) => {
+      if (err) return next(err);
+      normalizeFilePaths(req);
+      next();
+    });
+  },
+  any: () => (req, res, next) => {
+    multerUpload.any()(req, res, (err) => {
+      if (err) return next(err);
+      normalizeFilePaths(req);
+      next();
+    });
+  }
+};
 
 module.exports = upload;
