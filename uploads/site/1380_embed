@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <style type="text/css">
+      html, body, #mapDiv {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="mapDiv"></div>
+      
+    <script nonce="9XV-WmERs45BJSVhH_FKmA">
+      function onEmbedLoad() {
+        initEmbed([null,null,null,null,null,[[[2,"spotlit",null,null,null,null,null,[null,null,null,null,null,null,null,null,null,null,11,null,[null,null,null,null,null,null,null,null,null,null,null,null,null,1]]]],null,null,[[null,null,null,null,null,null,null,null,null,null,null,null,null,[[["4110969551879768619","1173663256362196644"],"/g/11nr5gqm_h",null,[284996694,770732502],null,null,null,null,null,null,null,null,null,null,"gcid:youth_clothing_store"],0,0,null,null,0,null,0]]]],null,["en","in"],[null,null,null,"/maps/api/js/ApplicationService.GetEntityDetails","/maps/embed/upgrade204",null,"/maps/embed/record204"],null,null,null,null,null,null,null,null,"Wz9_asrlPNCYhvcPhJa1iQg",null,null,null,[[[876.5837160108143,77.07325019999999,28.49966939999999],null,null,13.10000038146973],null,0,[["0x390d1906ce3d8a2b:0x1049b08369659ea4","Tobeque, 399, Electronic City, Phase IV, Udyog Vihar, Sector 18, Gurugram, Haryana 122015",[28.4996694,77.07325019999999],"1173663256362196644"],"Tobeque",["399","Electronic City, Phase IV, Udyog Vihar, Sector 18","Gurugram, Haryana 122015"],4.800000190734863,"18 reviews",null,null,"084470 00200",null,null,null,["/url?q=https://tobeque.com/\u0026opi=79508299\u0026sa=U\u0026ved=0ahUKEwiK_6WkwqCWAxVQjOEIHQRLLYEQ61gIFSgQ\u0026usg=AOvVaw0BOHOg1l7Q2rC71rtWIRBk","tobeque.com",null,"0ahUKEwiK_6WkwqCWAxVQjOEIHQRLLYEQ61gIFSgQ"],"Youth clothing store","399, Electronic City, Phase IV, Udyog Vihar, Sector 18, Gurugram, Haryana 122015",null,null,null,null,null,null,null,null,null,null,null,null,null,"ChIJK4o9zgYZDTkRpJ5laYOwSRA",null,null,"0ahUKEwiK_6WkwqCWAxVQjOEIHQRLLYEQ8BcIAigA","टोबैको",null,["tel:08447000200"],null,null,null,1,["0ahUKEwiK_6WkwqCWAxVQjOEIHQRLLYEQqtMBCA0oCg",["7JWVF3XF+V8"],["F3XF+V8 Gurugram, Haryana"],2],[[["Friday",5,[2026,8,14],[["9 am–5 pm",[[9],[17]]]],0,1],["Saturday",6,[2026,8,15],[["9 am–5 pm",[[9],[17]]]],0,1,["Hariyali Teej/Indian Independence Day might affect these hours","Hariyali Teej/Indian Independence Day",2]],["Sunday",7,[2026,8,16],[["Closed"]],0,2],["Monday",1,[2026,8,17],[["9 am–5 pm",[[9],[17]]]],0,1],["Tuesday",2,[2026,8,18],[["9 am–5 pm",[[9],[17]]]],0,1],["Wednesday",3,[2026,8,19],[["9 am–5 pm",[[9],[17]]]],0,1],["Thursday",4,[2026,8,20],[["9 am–5 pm",[[9],[17]]]],0,1]],[["Friday",5,[2026,8,14],[["9 am–5 pm",[[9],[17]]]],0,1],null,5,null,["Closed · Opens 9 am Sat",[[0,6,[null,[4292030248,4294097077]]]]],["Closed · Opens 9 am Sat",[[0,6,[null,[4292030248,4294097077]]]]],null,[24],["Closed",[[0,6,[null,[4292030248,4294097077]]]]]],5,null,null,null,1]]],null,null,null,0,null,null,null,null,null,null,[1]]);
+      }
+      function onApiLoad() {
+        var embed = document.createElement('script');
+        embed.src = "https://maps.gstatic.com/maps-api-v3/embed/js/65/12f/init_embed.js";
+        document.body.appendChild(embed);
+      }
+    </script>
+    <link rel="preload" href="https://maps.gstatic.com/maps-api-v3/embed/js/65/12f/init_embed.js" nonce="9XV-WmERs45BJSVhH_FKmA" as="script" />
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCmL18misQw9KdwqGaw3zHkitj8vG6QF2Y&amp;paint_origin=&amp;libraries=geometry,search&amp;v=weekly&amp;loading=async&amp;language=en&amp;region=in&amp;experimentation=allowed&amp;callback=onApiLoad" nonce="9XV-WmERs45BJSVhH_FKmA" async defer></script>
+  </body>
+</html>
