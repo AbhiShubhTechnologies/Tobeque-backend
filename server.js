@@ -29,28 +29,21 @@ app.use(express.urlencoded({ extended: true }));
 app.get('/', (req, res) => {
   res.send('Server Working');
 });
+// Persistent uploads directory: can be overridden by UPLOAD_DIR env for Hostinger/cPanel
+const UPLOAD_BASE = process.env.UPLOAD_DIR
+  ? path.resolve(process.env.UPLOAD_DIR)
+  : path.join(__dirname, 'uploads');
+
 // Ensure uploads folders exist
-const uploadDirs = [
-  'uploads',
-  'uploads/products',
-  'uploads/categories',
-  'uploads/banners',
-  'uploads/season',
-  'uploads/blogs',
-  'uploads/site',
-  'uploads/users',
-  'uploads/refunds',
-  'uploads/misc'
-];
-uploadDirs.forEach(dir => {
-  const fullPath = path.join(__dirname, dir);
-  if (!fs.existsSync(fullPath)) {
-    fs.mkdirSync(fullPath, { recursive: true });
+const uploadSubdirs = ['products', 'categories', 'banners', 'season', 'blogs', 'site', 'users', 'refunds', 'misc'];
+[UPLOAD_BASE, ...uploadSubdirs.map(d => path.join(UPLOAD_BASE, d))].forEach(dir => {
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
   }
 });
 
-// Map Static Assets Folder
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// Map Static Assets Folder — serves from the same persistent directory
+app.use('/uploads', express.static(UPLOAD_BASE));
 
 // Mount API Routes
 app.use('/api/auth', require('./routes/auth'));

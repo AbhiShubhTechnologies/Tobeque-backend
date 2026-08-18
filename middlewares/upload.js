@@ -1,37 +1,45 @@
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+require('dotenv').config();
+
+// UPLOAD_DIR can be set in .env to an absolute persistent path (e.g. /home/user/uploads)
+// This prevents image loss on server restarts on Hostinger/shared hosting
+const UPLOAD_BASE = process.env.UPLOAD_DIR
+  ? path.resolve(process.env.UPLOAD_DIR)
+  : path.join(__dirname, '..', 'uploads');
+
 
 // Configure Disk Storage
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    let folder = 'uploads/misc';
+    let subfolder = 'misc';
     
     if (req.originalUrl.includes('products')) {
-      folder = 'uploads/products';
+      subfolder = 'products';
     } else if (req.originalUrl.includes('categories')) {
-      folder = 'uploads/categories';
+      subfolder = 'categories';
     } else if (req.originalUrl.includes('banners')) {
-      folder = 'uploads/banners';
+      subfolder = 'banners';
     } else if (req.originalUrl.includes('season-collection')) {
-      folder = 'uploads/season';
+      subfolder = 'season';
     } else if (req.originalUrl.includes('blogs')) {
-      folder = 'uploads/blogs';
+      subfolder = 'blogs';
     } else if (req.originalUrl.includes('settings') || req.originalUrl.includes('site')) {
-      folder = 'uploads/site';
+      subfolder = 'site';
     } else if (req.originalUrl.includes('profile') || req.originalUrl.includes('customers')) {
-      folder = 'uploads/users';
+      subfolder = 'users';
     } else if (req.originalUrl.includes('refund-requests')) {
-      folder = 'uploads/refunds';
+      subfolder = 'refunds';
     }
 
-    const fullPath = path.join(__dirname, '..', folder);
+    const fullPath = path.join(UPLOAD_BASE, subfolder);
     if (!fs.existsSync(fullPath)) {
       fs.mkdirSync(fullPath, { recursive: true });
     }
 
     // Attach target subfolder to req for path normalization
-    req._uploadSubfolder = folder;
+    req._uploadSubfolder = `uploads/${subfolder}`;
 
     cb(null, fullPath);
   },
