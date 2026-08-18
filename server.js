@@ -33,8 +33,13 @@ app.get('/', (req, res) => {
 const uploadDirs = [
   'uploads',
   'uploads/products',
+  'uploads/categories',
   'uploads/banners',
+  'uploads/season',
+  'uploads/blogs',
   'uploads/site',
+  'uploads/users',
+  'uploads/refunds',
   'uploads/misc'
 ];
 uploadDirs.forEach(dir => {
