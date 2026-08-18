@@ -29,10 +29,23 @@ const testConnection = async () => {
             { email: { $in: ['', null] } },
             { $unset: { email: '' } }
           );
+
+          // Clean up legacy dead Cloudinary URLs from categories
+          const catCollection = db.collection('categories');
+          if (catCollection) {
+            await catCollection.updateMany(
+              { image: { $regex: 'cloudinary' } },
+              { $set: { image: '' } }
+            );
+            await catCollection.updateMany(
+              { banner: { $regex: 'cloudinary' } },
+              { $set: { banner: '' } }
+            );
+          }
         }
       }
     } catch (cleanErr) {
-      console.warn('Notice: user index cleanup encountered issue (non-fatal):', cleanErr.message);
+      console.warn('Notice: user/category index cleanup encountered issue (non-fatal):', cleanErr.message);
     }
   } catch (error) {
     console.error('Unable to connect to the database:', error);
