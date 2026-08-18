@@ -1,13 +1,39 @@
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 require('dotenv').config();
 
-// UPLOAD_DIR can be set in .env to an absolute persistent path (e.g. /home/user/uploads)
-// This prevents image loss on server restarts on Hostinger/shared hosting
-const UPLOAD_BASE = process.env.UPLOAD_DIR
-  ? path.resolve(process.env.UPLOAD_DIR)
-  : path.join(__dirname, '..', 'uploads');
+// ─────────────────────────────────────────────────────────────────────────────
+// Persistent uploads directory resolution (mirrors logic in server.js)
+// Priority:
+//   1. UPLOAD_DIR env variable (manually configured)
+//   2. Auto-detect home directory on Linux hosts (Hostinger, cPanel, VPS)
+//   3. Fallback: ./uploads inside the backend directory
+// ─────────────────────────────────────────────────────────────────────────────
+const resolveUploadBase = () => {
+  if (process.env.UPLOAD_DIR) {
+    return path.resolve(process.env.UPLOAD_DIR);
+  }
+  if (process.platform !== 'win32') {
+    let current = path.resolve(__dirname);
+    for (let i = 0; i < 5; i++) {
+      const parent = path.dirname(current);
+      if (parent === current) break;
+      if (/^\/home\/[^/]+$/.test(parent) || /^\/root$/.test(parent)) {
+        return path.join(parent, 'tobeque-uploads');
+      }
+      current = parent;
+    }
+    const osHome = os.homedir();
+    if (osHome && osHome !== '/' && fs.existsSync(osHome)) {
+      return path.join(osHome, 'tobeque-uploads');
+    }
+  }
+  return path.join(__dirname, '..', 'uploads');
+};
+
+const UPLOAD_BASE = resolveUploadBase();
 
 
 // Configure Disk Storage
