@@ -275,18 +275,61 @@ const confirmOrder = async (req, res, next) => {
 
     let emailResult = { success: false, reason: 'Email notification disabled' };
     if (sendEmail) {
-      const emailUser = await User.findById(order.user).select('firstName lastName email phone');
-      const items = await OrderItem.find({ order: order._id });
-      emailResult = await sendOrderConfirmationEmail(
-        order.toJSON(),
-        emailUser,
-        items.map(i => i.toJSON())
-      );
+      // 1. Try to find the user in the database
+      let emailUser = null;
+      if (order.user) {
+        emailUser = await User.findById(order.user).select('firstName lastName email phone');
+      }
+
+      // 2. If no user found or user has no email, extract from shippingAddress / billingAddress
+      if (!emailUser || !emailUser.email) {
+        let addrEmail = null;
+        let addrName = null;
+        try {
+          const shipping = typeof order.shippingAddress === 'string'
+            ? JSON.parse(order.shippingAddress)
+            : order.shippingAddress;
+          addrEmail = shipping?.email;
+          addrName = shipping?.name;
+        } catch (e) {}
+        if (!addrEmail) {
+          try {
+            const billing = typeof order.billingAddress === 'string'
+              ? JSON.parse(order.billingAddress)
+              : order.billingAddress;
+            addrEmail = billing?.email;
+            addrName = addrName || billing?.name;
+          } catch (e) {}
+        }
+        if (addrEmail) {
+          const nameParts = (addrName || 'Customer').split(' ');
+          emailUser = {
+            firstName: nameParts[0] || 'Customer',
+            lastName: nameParts.slice(1).join(' ') || '',
+            email: addrEmail
+          };
+        }
+      }
+
+      if (emailUser && emailUser.email) {
+        const items = await OrderItem.find({ order: order._id });
+        emailResult = await sendOrderConfirmationEmail(
+          order.toJSON(),
+          emailUser,
+          items.map(i => i.toJSON())
+        );
+        if (!emailResult.success) {
+          console.error(`[Order Confirm] Email failed for order ${order.orderNumber}:`, emailResult.error || emailResult.reason);
+        }
+      } else {
+        console.warn(`[Order Confirm] No email address found for order ${order.orderNumber} — email skipped`);
+        emailResult = { success: false, reason: 'No email address found for this customer' };
+      }
     }
 
     await AdminLog.create({
       adminId: req.admin.id,
-      action: `Confirmed order #${order.orderNumber}${sendEmail ? ' and sent tax invoice email' : ''}`,
+      action: `Confirmed order #${order.orderNumber}${sendEmail ? (emailResult.success ? ' and sent tax invoice email' : ' (email failed)') : ''}`,
       entityType: 'order',
       entityId: order.id,
       ipAddress: req.ip
@@ -296,8 +339,9 @@ const confirmOrder = async (req, res, next) => {
       success: true,
       message: emailResult.success
         ? `Order #${order.orderNumber} confirmed and tax invoice emailed successfully!`
-        : `Order #${order.orderNumber} confirmed successfully.`,
+        : `Order #${order.orderNumber} confirmed. ${emailResult.reason || 'Email could not be sent.'}`,
       emailSent: emailResult.success,
+      emailError: emailResult.success ? undefined : (emailResult.error || emailResult.reason),
       order
     });
   } catch (error) {
