@@ -29,51 +29,12 @@ app.use(express.urlencoded({ extended: true }));
 app.get('/', (req, res) => {
   res.send('Server Working');
 });
-// ─────────────────────────────────────────────────────────────────────────────
-// Persistent uploads directory resolution
-// Priority:
-//   1. UPLOAD_DIR env variable (manually configured)
-//   2. Auto-detect: walk up from __dirname to find a writable home/parent dir
-//      On Hostinger: /home/u123456789/ — uploads survive Node.js restarts there
-//   3. Fallback: ./uploads inside the backend directory
-// ─────────────────────────────────────────────────────────────────────────────
-const resolveUploadBase = () => {
-  // 1. Explicit override via env
-  if (process.env.UPLOAD_DIR) {
-    return path.resolve(process.env.UPLOAD_DIR);
-  }
-
-  // 2. Auto-detect persistent directory on Linux hosts (Hostinger, cPanel, VPS)
-  //    Walk up from the backend folder to find the home directory
-  if (process.platform !== 'win32') {
-    let current = path.resolve(__dirname);
-    for (let i = 0; i < 5; i++) {
-      const parent = path.dirname(current);
-      if (parent === current) break; // Reached filesystem root
-      // Check if parent looks like a home directory (e.g. /home/u123456789)
-      if (/^\/home\/[^/]+$/.test(parent) || /^\/root$/.test(parent)) {
-        const persistentPath = path.join(parent, 'tobeque-uploads');
-        console.log(`[Uploads] Auto-detected persistent uploads path: ${persistentPath}`);
-        return persistentPath;
-      }
-      current = parent;
-    }
-    // Also try OS homedir
-    const osHome = require('os').homedir();
-    if (osHome && osHome !== '/' && fs.existsSync(osHome)) {
-      const persistentPath = path.join(osHome, 'tobeque-uploads');
-      console.log(`[Uploads] Using OS homedir for persistent uploads: ${persistentPath}`);
-      return persistentPath;
-    }
-  }
-
-  // 3. Fallback — local uploads folder (NOTE: may be wiped on Hostinger restarts)
-  console.warn('[Uploads] ⚠️  Using local uploads folder — images may not persist after server restart. Set UPLOAD_DIR in .env to fix this.');
-  return path.join(__dirname, 'uploads');
-};
-
-const UPLOAD_BASE = resolveUploadBase();
-console.log(`[Uploads] Storage directory: ${UPLOAD_BASE}`);
+// Persistent uploads directory:
+// Set UPLOAD_DIR in .env to a path outside the app folder (e.g. on Hostinger: /home/u123456789/uploads)
+// Leave unset to use the default ./uploads folder inside the backend directory
+const UPLOAD_BASE = process.env.UPLOAD_DIR
+  ? path.resolve(process.env.UPLOAD_DIR)
+  : path.join(__dirname, 'uploads');
 
 // Ensure uploads folders exist
 const uploadSubdirs = ['products', 'categories', 'banners', 'season', 'blogs', 'site', 'users', 'refunds', 'misc'];
@@ -83,8 +44,13 @@ const uploadSubdirs = ['products', 'categories', 'banners', 'season', 'blogs', '
   }
 });
 
-// Map Static Assets Folder — serves from the same persistent directory
+// Map Static Assets Folder — serves from the persistent directory
 app.use('/uploads', express.static(UPLOAD_BASE));
+// Also serve from legacy local uploads folder as fallback (keeps old images visible)
+const localUploads = path.join(__dirname, 'uploads');
+if (UPLOAD_BASE !== localUploads) {
+  app.use('/uploads', express.static(localUploads));
+}
 
 // Mount API Routes
 app.use('/api/auth', require('./routes/auth'));
