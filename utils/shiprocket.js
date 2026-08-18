@@ -66,6 +66,8 @@ const getShiprocketToken = async () => {
     console.log('[Shiprocket] ✅ Token refreshed successfully.');
     return token;
   } catch (error) {
+    cachedToken = null;
+    tokenExpiresAt = null;
     const msg = error.response?.data?.message || error.message;
     console.error('[Shiprocket] ❌ Token generation failed:', msg);
     throw new Error(`Shiprocket authentication error: ${msg}`);
