@@ -245,6 +245,12 @@ const buildInvoiceHTML = ({ order, user, items = [] }) => {
                 <span style="font-size:12px;font-weight:600;color:#92400e;text-transform:uppercase;letter-spacing:0.5px;">Your Note: </span>
                 <span style="font-size:13px;color:#78350f;">${order.notes}</span>
               </div>` : ''}
+              ${(order.companyName || order.companyGst) ? `
+              <div style="margin-top:16px;padding:14px 18px;background:#f0f9ff;border:1px solid #bae6fd;border-left:4px solid #0284c7;border-radius:6px;">
+                <div style="font-size:11px;font-weight:700;color:#0284c7;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">🏢 Business & Tax Invoice Details</div>
+                ${order.companyName ? `<div style="font-size:13px;color:#0f172a;margin-bottom:2px;">Company Name: <strong>${order.companyName}</strong></div>` : ''}
+                ${order.companyGst ? `<div style="font-size:13px;color:#0f172a;">GSTIN / Tax ID: <strong style="font-family:monospace;letter-spacing:0.5px;">${order.companyGst}</strong></div>` : ''}
+              </div>` : ''}
             </td>
           </tr>
 

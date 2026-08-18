@@ -75,6 +75,14 @@ const OrderSchema = new mongoose.Schema({
   notes: {
     type: String
   },
+  companyName: {
+    type: String,
+    default: ''
+  },
+  companyGst: {
+    type: String,
+    default: ''
+  },
   adminNotes: {
     type: String
   },

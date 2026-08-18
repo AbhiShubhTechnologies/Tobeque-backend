@@ -291,7 +291,7 @@ const updateUserProfile = async (req, res, next) => {
 // @access  Private (user)
 const createOrder = async (req, res, next) => {
   try {
-    const { shippingAddress, billingAddress, items, customerName, customerPhone, couponCode, paymentMethod, notes, shippingCost: clientShippingCost } = req.body;
+    const { shippingAddress, billingAddress, items, customerName, customerPhone, couponCode, paymentMethod, notes, companyName, companyGst, shippingCost: clientShippingCost } = req.body;
 
     if (!items || items.length === 0) {
       return res.status(400).json({ success: false, error: 'No items in order' });
@@ -404,7 +404,9 @@ const createOrder = async (req, res, next) => {
       discountAmount,
       taxAmount: finalTaxAmount,
       couponCode: appliedCouponCode,
-      notes
+      notes,
+      companyName: companyName || '',
+      companyGst: companyGst || ''
     });
 
     // Create order items and deduct inventory
@@ -599,7 +601,9 @@ const verifyRazorpayPayment = async (req, res, next) => {
       customerName, 
       customerPhone, 
       couponCode, 
-      notes
+      notes,
+      companyName,
+      companyGst
     } = req.body;
 
     const isZeroAmountOrder = (razorpay_order_id === 'order_zero_discount' || razorpay_payment_id === 'pay_zero_discount');
@@ -681,6 +685,7 @@ const verifyRazorpayPayment = async (req, res, next) => {
       shippingStatus: 'pending',
       shippingAddress: JSON.stringify(finalAddress), billingAddress: JSON.stringify(finalBillingAddress),
       discountAmount, taxAmount: finalTaxAmount, couponCode: appliedCouponCode, notes,
+      companyName: companyName || '', companyGst: companyGst || '',
       razorpayOrderId: isZeroAmountOrder ? 'order_zero_discount' : razorpay_order_id,
       razorpayPaymentId: isZeroAmountOrder ? 'pay_zero_discount' : razorpay_payment_id
     });
