@@ -52,6 +52,22 @@ if (UPLOAD_BASE !== localUploads) {
   app.use('/uploads', express.static(localUploads));
 }
 
+// ── Diagnostic endpoint: check uploads path & file count on live server ──────
+app.get('/api/debug-uploads', (req, res) => {
+  const result = { uploadBase: UPLOAD_BASE, localUploads, subdirs: {} };
+  const subdirs = ['products', 'categories', 'banners', 'season', 'site', 'users'];
+  subdirs.forEach(sub => {
+    const fullPath = path.join(UPLOAD_BASE, sub);
+    try {
+      const files = fs.existsSync(fullPath) ? fs.readdirSync(fullPath) : [];
+      result.subdirs[sub] = { path: fullPath, count: files.length, sample: files.slice(0, 3) };
+    } catch(e) {
+      result.subdirs[sub] = { error: e.message };
+    }
+  });
+  res.json(result);
+});
+
 // Mount API Routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/dashboard', require('./routes/dashboard'));
