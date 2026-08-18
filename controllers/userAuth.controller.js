@@ -44,7 +44,6 @@ const sendOtp = async (req, res, next) => {
         phone: normalizedPhone,
         firstName: '',
         lastName: '',
-        email: '',
         password: generatedOtp,
         status: 'active'
       });
@@ -244,7 +243,10 @@ const updateUserProfile = async (req, res, next) => {
 
     if (req.body.firstName !== undefined) user.firstName = req.body.firstName;
     if (req.body.lastName !== undefined) user.lastName = req.body.lastName;
-    if (req.body.email !== undefined) user.email = req.body.email;
+    if (req.body.email !== undefined) {
+      const trimmedEmail = typeof req.body.email === 'string' ? req.body.email.trim().toLowerCase() : '';
+      user.email = trimmedEmail || undefined;
+    }
     if (req.body.address !== undefined) user.address = req.body.address;
     if (req.body.city !== undefined) user.city = req.body.city;
     if (req.body.state !== undefined) user.state = req.body.state;
