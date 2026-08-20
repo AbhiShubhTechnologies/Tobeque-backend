@@ -27,6 +27,38 @@ const SHIPROCKET_BASE_URL = 'https://apiv2.shiprocket.in/v1/external';
 // ─── In-memory token cache ────────────────────────────────────────────────────
 let cachedToken = null;
 let tokenExpiresAt = null; // UTC ms timestamp
+const mongoose = require('mongoose');
+
+// Helper to resolve Shiprocket configuration from DB Settings or process.env
+const getShiprocketConfig = async () => {
+  let email = process.env.SHIPROCKET_EMAIL;
+  let password = process.env.SHIPROCKET_PASSWORD;
+  let pickupPincode = process.env.SHIPROCKET_PICKUP_PINCODE;
+  let pickupLocation = process.env.SHIPROCKET_PICKUP_LOCATION;
+
+  try {
+    const Setting = mongoose.models.Setting || require('../models/setting');
+    const settings = await Setting.find({
+      key: { $in: ['shiprocketEmail', 'shiprocketPassword', 'shiprocketPickupPincode', 'shiprocketPickupLocation'] }
+    });
+    const map = {};
+    settings.forEach((s) => { map[s.key] = s.value; });
+
+    if (map.shiprocketEmail) email = map.shiprocketEmail;
+    if (map.shiprocketPassword) password = map.shiprocketPassword;
+    if (map.shiprocketPickupPincode) pickupPincode = map.shiprocketPickupPincode;
+    if (map.shiprocketPickupLocation) pickupLocation = map.shiprocketPickupLocation;
+  } catch (err) {
+    // Ignore DB fetch failure and fallback to env
+  }
+
+  return {
+    email: (email || '').trim(),
+    password: (password || '').trim(),
+    pickupPincode: (pickupPincode || '380015').trim(),
+    pickupLocation: (pickupLocation || 'Primary').trim()
+  };
+};
 
 /**
  * Authenticate with Shiprocket and return a bearer token.
@@ -38,12 +70,11 @@ const getShiprocketToken = async () => {
     return cachedToken;
   }
 
-  const email = process.env.SHIPROCKET_EMAIL;
-  const password = process.env.SHIPROCKET_PASSWORD;
+  const { email, password } = await getShiprocketConfig();
 
   if (!email || !password) {
     throw new Error(
-      'Shiprocket credentials are missing. Please set SHIPROCKET_EMAIL and SHIPROCKET_PASSWORD in your .env file.'
+      'Shiprocket credentials are missing. Please enter your Shiprocket Email & Password in Admin Settings (Shipping & COD) or set SHIPROCKET_EMAIL and SHIPROCKET_PASSWORD in your backend .env file.'
     );
   }
 
@@ -56,7 +87,7 @@ const getShiprocketToken = async () => {
     const { token } = response.data;
 
     if (!token) {
-      throw new Error('Shiprocket authentication failed: No token received.');
+      throw new Error('Shiprocket authentication failed: No token received from server.');
     }
 
     cachedToken = token;
@@ -99,6 +130,7 @@ const getShiprocketClient = async () => {
  */
 const createShiprocketOrder = async (order, items) => {
   const client = await getShiprocketClient();
+  const config = await getShiprocketConfig();
 
   const shippingAddr =
     typeof order.shippingAddress === 'string'
@@ -111,14 +143,14 @@ const createShiprocketOrder = async (order, items) => {
       : order.billingAddress || shippingAddr;
 
   // Map local order items to Shiprocket's expected format
-  const orderItems = items.map((item) => ({
-    name: item.productName,
-    sku: item.sku,
-    units: item.quantity,
-    selling_price: parseFloat(item.price).toFixed(2),
+  const orderItems = (items || []).map((item, idx) => ({
+    name: item.productName || `Item #${idx + 1}`,
+    sku: item.sku || (item.product?.sku) || `SKU-${item.id || item._id || idx + 1}`,
+    units: item.quantity || 1,
+    selling_price: parseFloat(item.price || 0).toFixed(2),
     discount: '0',
     tax: parseFloat(item.taxRate || 0).toFixed(2),
-    hsn: '' // HSN code (can be added to Product model later)
+    hsn: ''
   }));
 
   const isCOD = order.paymentMethod === 'cod' ? 1 : 0;
@@ -136,11 +168,11 @@ const createShiprocketOrder = async (order, items) => {
   const payload = {
     order_id: order.orderNumber,
     order_date: new Date(order.createdAt).toISOString().split('T')[0],
-    pickup_location: process.env.SHIPROCKET_PICKUP_LOCATION || 'Primary',
+    pickup_location: config.pickupLocation || 'Primary',
 
     // Billing Details
-    billing_customer_name: billingAddr?.name || shippingAddr?.name || 'Customer',
-    billing_last_name: '',
+    billing_customer_name: billingAddr?.name || shippingAddr?.name || order.user?.firstName || 'Customer',
+    billing_last_name: order.user?.lastName || '',
     billing_address: billingAddr?.street || shippingAddr?.street || '',
     billing_address_2: billingAddr?.address2 || '',
     billing_city: billingAddr?.city || shippingAddr?.city || '',
@@ -173,7 +205,7 @@ const createShiprocketOrder = async (order, items) => {
     giftwrap_charges: 0,
     transaction_charges: 0,
     total_discount: parseFloat(order.discountAmount || 0).toFixed(2),
-    sub_total: parseFloat(order.subtotal).toFixed(2),
+    sub_total: parseFloat(order.subtotal || 0).toFixed(2),
     length: parseFloat(process.env.SHIPROCKET_DEFAULT_LENGTH || 15),
     breadth: parseFloat(process.env.SHIPROCKET_DEFAULT_BREADTH || 12),
     height: parseFloat(process.env.SHIPROCKET_DEFAULT_HEIGHT || 10),
@@ -200,7 +232,8 @@ const createShiprocketOrder = async (order, items) => {
  */
 const checkServiceability = async (deliveryPincode, weight = 0.5, cod = 0) => {
   const client = await getShiprocketClient();
-  const pickupPincode = process.env.SHIPROCKET_PICKUP_PINCODE || '380015';
+  const config = await getShiprocketConfig();
+  const pickupPincode = config.pickupPincode || '380015';
 
   try {
     const response = await client.get('/courier/serviceability/', {
