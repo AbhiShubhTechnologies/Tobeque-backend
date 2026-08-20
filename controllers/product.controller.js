@@ -282,7 +282,16 @@ const createProduct = async (req, res, next) => {
 
     let parsedColors = [];
     if (colors) {
-      parsedColors = Array.isArray(colors) ? colors : (typeof colors === 'string' ? colors.split(',').map(c => c.trim()).filter(Boolean) : []);
+      if (Array.isArray(colors)) {
+        parsedColors = colors;
+      } else if (typeof colors === 'string') {
+        const trimmed = colors.trim();
+        if (trimmed.startsWith('[')) {
+          try { parsedColors = JSON.parse(trimmed).filter(Boolean); } catch(e) { parsedColors = []; }
+        } else {
+          parsedColors = trimmed.split(',').map(c => c.trim()).filter(Boolean);
+        }
+      }
     }
 
     let parsedStyleItWith = [];
@@ -589,7 +598,16 @@ const updateProduct = async (req, res, next) => {
     }
 
     if (colors !== undefined) {
-      product.colors = Array.isArray(colors) ? colors : (typeof colors === 'string' ? colors.split(',').map(c => c.trim()).filter(Boolean) : []);
+      if (Array.isArray(colors)) {
+        product.colors = colors;
+      } else if (typeof colors === 'string') {
+        const cTrimmed = colors.trim();
+        if (cTrimmed.startsWith('[')) {
+          try { product.colors = JSON.parse(cTrimmed).filter(Boolean); } catch(e) { product.colors = []; }
+        } else {
+          product.colors = cTrimmed.split(',').map(c => c.trim()).filter(Boolean);
+        }
+      }
     }
 
     if (req.body.colorSwatches !== undefined || (req.files && req.files.colorSwatchImages)) {
