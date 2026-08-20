@@ -305,9 +305,35 @@ const createProduct = async (req, res, next) => {
       parsedCustomSections = typeof customSections === 'string' ? JSON.parse(customSections) : customSections;
     }
 
-    let parsedRelatedCategories = [];
-    if (relatedCategories) {
-      parsedRelatedCategories = Array.isArray(relatedCategories) ? relatedCategories : (typeof relatedCategories === 'string' ? JSON.parse(relatedCategories) : []);
+    let parsedColorSwatches = [];
+    if (req.body.colorSwatches) {
+      try {
+        parsedColorSwatches = typeof req.body.colorSwatches === 'string' ? JSON.parse(req.body.colorSwatches) : req.body.colorSwatches;
+      } catch (e) {
+        parsedColorSwatches = [];
+      }
+    }
+
+    if (req.files && req.files.colorSwatchImages) {
+      let swatchColors = req.body.colorSwatchColors;
+      if (swatchColors) {
+        if (typeof swatchColors === 'string') {
+          try { swatchColors = JSON.parse(swatchColors); } catch(e) { swatchColors = [swatchColors]; }
+        }
+      } else {
+        swatchColors = [];
+      }
+      req.files.colorSwatchImages.forEach((file, idx) => {
+        const colName = (swatchColors[idx] || '').trim();
+        if (colName) {
+          const existing = parsedColorSwatches.find(s => s.color.toLowerCase().trim() === colName.toLowerCase());
+          if (existing) {
+            existing.image = file.path;
+          } else {
+            parsedColorSwatches.push({ color: colName, image: file.path });
+          }
+        }
+      });
     }
 
     const product = await Product.create({
@@ -334,6 +360,7 @@ const createProduct = async (req, res, next) => {
       thumbnail,
       thumbnailColor: req.body.thumbnailColor || '',
       colors: parsedColors,
+      colorSwatches: parsedColorSwatches,
       category: categoryId || null,
       additionalCategories: parsedAdditionalCategories,
       brand: brandId || null,
@@ -563,6 +590,41 @@ const updateProduct = async (req, res, next) => {
 
     if (colors !== undefined) {
       product.colors = Array.isArray(colors) ? colors : (typeof colors === 'string' ? colors.split(',').map(c => c.trim()).filter(Boolean) : []);
+    }
+
+    if (req.body.colorSwatches !== undefined || (req.files && req.files.colorSwatchImages)) {
+      let parsedColorSwatches = product.colorSwatches || [];
+      if (req.body.colorSwatches !== undefined) {
+        try {
+          parsedColorSwatches = typeof req.body.colorSwatches === 'string' ? JSON.parse(req.body.colorSwatches) : req.body.colorSwatches;
+        } catch (e) {
+          parsedColorSwatches = [];
+        }
+      }
+
+      if (req.files && req.files.colorSwatchImages) {
+        let swatchColors = req.body.colorSwatchColors;
+        if (swatchColors) {
+          if (typeof swatchColors === 'string') {
+            try { swatchColors = JSON.parse(swatchColors); } catch(e) { swatchColors = [swatchColors]; }
+          }
+        } else {
+          swatchColors = [];
+        }
+        req.files.colorSwatchImages.forEach((file, idx) => {
+          const colName = (swatchColors[idx] || '').trim();
+          if (colName) {
+            const existing = parsedColorSwatches.find(s => s.color.toLowerCase().trim() === colName.toLowerCase());
+            if (existing) {
+              existing.image = file.path;
+            } else {
+              parsedColorSwatches.push({ color: colName, image: file.path });
+            }
+          }
+        });
+      }
+
+      product.colorSwatches = parsedColorSwatches;
     }
 
     if (countdownEvergreen !== undefined) {

@@ -106,6 +106,10 @@ const ProductSchema = new mongoose.Schema({
   colors: [{
     type: String
   }],
+  colorSwatches: [{
+    color: { type: String, default: '' },
+    image: { type: String, default: '' }
+  }],
   variants: {
     type: mongoose.Schema.Types.Mixed
   },
