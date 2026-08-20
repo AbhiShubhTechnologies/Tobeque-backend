@@ -29,41 +29,92 @@ app.use(express.urlencoded({ extended: true }));
 app.get('/', (req, res) => {
   res.send('Server Working');
 });
-// Persistent uploads directory:
-// Set UPLOAD_DIR in .env to a path outside the app folder (e.g. on Hostinger: /home/u123456789/uploads)
-// Leave unset to use the default ./uploads folder inside the backend directory
+// ── Uploads directory setup ───────────────────────────────────────────────────
+// UPLOAD_DIR env → persistent path outside app (survives redeployments)
+// Fallback       → ./uploads inside the backend directory (local dev)
 const UPLOAD_BASE = process.env.UPLOAD_DIR
   ? path.resolve(process.env.UPLOAD_DIR)
   : path.join(__dirname, 'uploads');
 
-// Ensure uploads folders exist
+const localUploads = path.join(__dirname, 'uploads');
+
+// Auto-create all needed subfolders on every startup
 const uploadSubdirs = ['products', 'categories', 'banners', 'season', 'blogs', 'site', 'users', 'refunds', 'misc'];
 [UPLOAD_BASE, ...uploadSubdirs.map(d => path.join(UPLOAD_BASE, d))].forEach(dir => {
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+});
+// Also ensure local ./uploads exists (for dev / legacy fallback)
+[localUploads, ...uploadSubdirs.map(d => path.join(localUploads, d))].forEach(dir => {
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 });
 
-// Map Static Assets Folder — serves from the persistent directory
-app.use('/uploads', express.static(UPLOAD_BASE));
-// Also serve from legacy local uploads folder as fallback (keeps old images visible)
-const localUploads = path.join(__dirname, 'uploads');
+// Auto-copy existing images from legacy/versioned folders to UPLOAD_BASE (preserves old images)
+const syncLegacyUploads = (sourceDir, targetDir) => {
+  if (!fs.existsSync(sourceDir) || sourceDir === targetDir) return;
+  try {
+    const items = fs.readdirSync(sourceDir, { withFileTypes: true });
+    for (const item of items) {
+      const srcPath = path.join(sourceDir, item.name);
+      const destPath = path.join(targetDir, item.name);
+      if (item.isDirectory()) {
+        if (!fs.existsSync(destPath)) fs.mkdirSync(destPath, { recursive: true });
+        syncLegacyUploads(srcPath, destPath);
+      } else if (item.isFile()) {
+        if (!fs.existsSync(destPath)) {
+          fs.copyFileSync(srcPath, destPath);
+        }
+      }
+    }
+  } catch (err) {
+    console.warn(`[Storage] Auto-sync warning for ${sourceDir}:`, err.message);
+  }
+};
+
+// Execute sync on startup
 if (UPLOAD_BASE !== localUploads) {
-  app.use('/uploads', express.static(localUploads));
+  syncLegacyUploads(localUploads, UPLOAD_BASE);
+}
+const ftpRootUploads = '/tobeque-uploads';
+if (fs.existsSync(ftpRootUploads)) {
+  syncLegacyUploads(ftpRootUploads, UPLOAD_BASE);
 }
 
-// ── Diagnostic endpoint: check uploads path & file count on live server ──────
+console.log(`[Storage] Upload base: ${UPLOAD_BASE}`);
+
+// ── Serve /uploads from ALL possible locations ────────────────────────────────
+// Express tries each static path in order and returns the first match found.
+
+// 1. Primary: persistent UPLOAD_DIR path (new & synced uploads live here)
+app.use('/uploads', express.static(UPLOAD_BASE, { maxAge: '7d' }));
+
+// 2. Fallback: local ./uploads inside backend dir
+if (UPLOAD_BASE !== localUploads) {
+  app.use('/uploads', express.static(localUploads, { maxAge: '7d' }));
+}
+
+// 3. Fallback: FTP-root /tobeque-uploads
+if (fs.existsSync(ftpRootUploads)) {
+  app.use('/uploads', express.static(ftpRootUploads, { maxAge: '7d' }));
+}
+
+// ── Diagnostic endpoint ───────────────────────────────────────────────────────
 app.get('/api/debug-uploads', (req, res) => {
-  const result = { uploadBase: UPLOAD_BASE, localUploads, subdirs: {} };
-  const subdirs = ['products', 'categories', 'banners', 'season', 'site', 'users'];
+  const result = {
+    uploadBase: UPLOAD_BASE,
+    localUploads,
+    usingPersistentDir: UPLOAD_BASE !== localUploads,
+    subdirs: {}
+  };
+  const subdirs = ['products', 'categories', 'banners', 'season', 'site', 'users', 'refunds', 'misc', 'blogs'];
   subdirs.forEach(sub => {
-    const fullPath = path.join(UPLOAD_BASE, sub);
-    try {
-      const files = fs.existsSync(fullPath) ? fs.readdirSync(fullPath) : [];
-      result.subdirs[sub] = { path: fullPath, count: files.length, sample: files.slice(0, 3) };
-    } catch(e) {
-      result.subdirs[sub] = { error: e.message };
-    }
+    const p1 = path.join(UPLOAD_BASE, sub);
+    const p2 = path.join(localUploads, sub);
+    const files1 = fs.existsSync(p1) ? fs.readdirSync(p1) : [];
+    const files2 = (p1 !== p2 && fs.existsSync(p2)) ? fs.readdirSync(p2) : [];
+    result.subdirs[sub] = {
+      persistent: { path: p1, count: files1.length, sample: files1.slice(0, 2) },
+      ...(p1 !== p2 ? { legacy: { path: p2, count: files2.length, sample: files2.slice(0, 2) } } : {})
+    };
   });
   res.json(result);
 });

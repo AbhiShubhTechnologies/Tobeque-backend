@@ -26,6 +26,7 @@
     "razorpay": "^2.9.6"
   },
   "devDependencies": {
+    "basic-ftp": "^6.2.0",
     "nodemon": "^3.1.2"
   },
   "engines": {

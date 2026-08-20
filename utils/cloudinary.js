@@ -1,3 +1,11 @@
+/**
+ * cloudinary.js — Asset deletion utility.
+ *
+ * Handles deletion of both:
+ * - Cloudinary-hosted images (by extracting publicId from URL)
+ * - Locally stored files (from UPLOAD_DIR or legacy ./uploads/)
+ */
+
 const path = require('path');
 const fs = require('fs');
 const cloudinary = require('cloudinary').v2;
@@ -9,6 +17,13 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
+// Resolve the persistent upload base (same logic as upload.js and server.js)
+const UPLOAD_BASE = process.env.UPLOAD_DIR
+  ? path.resolve(process.env.UPLOAD_DIR)
+  : path.join(__dirname, '..', 'uploads');
+
+const LOCAL_UPLOADS = path.join(__dirname, '..', 'uploads');
+
 const extractPublicId = (url) => {
   if (!url || typeof url !== 'string') return null;
   if (!url.includes('cloudinary.com')) return null;
@@ -17,10 +32,8 @@ const extractPublicId = (url) => {
     const cleanUrl = url.split('?')[0];
     const match = cleanUrl.match(/\/upload\/(?:v\d+\/)?(.+)$/);
     if (!match) return null;
-
     const withExt = match[1];
-    const publicId = withExt.replace(/\.[^/.]+$/, '');
-    return publicId;
+    return withExt.replace(/\.[^/.]+$/, '');
   } catch {
     return null;
   }
@@ -29,32 +42,43 @@ const extractPublicId = (url) => {
 const deleteCloudinaryAsset = async (url) => {
   if (!url || typeof url !== 'string') return;
 
-  // 1. Handle local file deletion if path starts with /uploads/ or contains /uploads/
-  if (url.includes('/uploads/')) {
+  // 1. Handle Cloudinary-hosted URLs
+  if (url.includes('cloudinary.com')) {
+    const publicId = extractPublicId(url);
+    if (!publicId) return;
     try {
-      const cleanPath = url.substring(url.indexOf('/uploads/'));
-      const localFilePath = path.join(__dirname, '..', cleanPath);
-      if (fs.existsSync(localFilePath)) {
-        fs.unlinkSync(localFilePath);
-        console.log(`[Storage] Deleted local file: ${localFilePath}`);
+      const result = await cloudinary.uploader.destroy(publicId, { resource_type: 'image', invalidate: true });
+      if (result.result === 'not found') {
+        await cloudinary.uploader.destroy(publicId, { resource_type: 'video', invalidate: true });
       }
     } catch (err) {
-      console.warn(`[Storage] Could not delete local file "${url}":`, err.message);
+      console.warn(`[Cloudinary] Could not delete asset "${publicId}":`, err.message);
     }
     return;
   }
 
-  // 2. Handle Cloudinary asset deletion if URL is Cloudinary
-  const publicId = extractPublicId(url);
-  if (!publicId) return;
+  // 2. Handle local disk file deletion (path like /uploads/products/file.jpg)
+  if (url.includes('/uploads/')) {
+    const cleanPath = url.substring(url.indexOf('/uploads/'));
+    const subPath = cleanPath.replace(/^\/uploads\//, ''); // e.g. products/file.jpg
 
-  try {
-    const result = await cloudinary.uploader.destroy(publicId, { resource_type: 'image', invalidate: true });
-    if (result.result === 'not found') {
-      await cloudinary.uploader.destroy(publicId, { resource_type: 'video', invalidate: true });
+    // Try deleting from persistent UPLOAD_DIR first, then local fallback
+    const pathsToTry = [
+      path.join(UPLOAD_BASE, subPath),
+      path.join(LOCAL_UPLOADS, subPath),
+    ];
+
+    for (const filePath of pathsToTry) {
+      try {
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+          console.log(`[Storage] Deleted local file: ${filePath}`);
+          return; // stop after first successful delete
+        }
+      } catch (err) {
+        console.warn(`[Storage] Could not delete "${filePath}":`, err.message);
+      }
     }
-  } catch (err) {
-    console.warn(`[Cloudinary] Could not delete asset "${publicId}":`, err.message);
   }
 };
 
