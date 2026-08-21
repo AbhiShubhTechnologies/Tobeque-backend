@@ -299,6 +299,11 @@ const createProduct = async (req, res, next) => {
       parsedStyleItWith = Array.isArray(styleItWith) ? styleItWith : (typeof styleItWith === 'string' ? JSON.parse(styleItWith) : []);
     }
 
+    let parsedRelatedCategories = [];
+    if (relatedCategories) {
+      parsedRelatedCategories = Array.isArray(relatedCategories) ? relatedCategories : (typeof relatedCategories === 'string' ? JSON.parse(relatedCategories) : []);
+    }
+
     let parsedAdditionalCategories = [];
     if (additionalCategories) {
       parsedAdditionalCategories = Array.isArray(additionalCategories) ? additionalCategories : (typeof additionalCategories === 'string' ? JSON.parse(additionalCategories) : []);

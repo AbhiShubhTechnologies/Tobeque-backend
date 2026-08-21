@@ -1,4 +1,5 @@
-const { Order, User, Product, OrderItem, AdminLog } = require('../models');
+const { Order, User, Product, ProductImage, OrderItem, AdminLog } = require('../models');
+
 
 // @desc    Get Central Admin Dashboard Stats
 // @route   GET /api/dashboard/stats
@@ -96,9 +97,21 @@ const getDashboardStats = async (req, res, next) => {
     ]);
 
     const topSellers = await Promise.all(topSellersAgg.map(async (item) => {
-      let productDetails = null;
+      let thumbnail = null;
       if (item._id) {
-        productDetails = await Product.findById(item._id).select('thumbnail');
+        try {
+          const productDetails = await Product.findById(item._id).select('thumbnail').lean();
+          if (productDetails) {
+            thumbnail = productDetails.thumbnail || null;
+          }
+          // Fallback: try to get first gallery image if thumbnail is empty
+          if (!thumbnail) {
+            const firstImg = await ProductImage.findOne({ product: item._id }).select('imageUrl').lean();
+            if (firstImg) thumbnail = firstImg.imageUrl;
+          }
+        } catch (e) {
+          // product may have been deleted — thumbnail stays null
+        }
       }
       return {
         productId:    item._id,
@@ -106,7 +119,7 @@ const getDashboardStats = async (req, res, next) => {
         sku:          item.sku,
         totalSold:    item.totalSold,
         totalRevenue: parseFloat(item.totalRevenue.toFixed(2)),
-        product: productDetails ? { thumbnail: productDetails.thumbnail } : null
+        product: thumbnail ? { thumbnail } : null
       };
     }));
 

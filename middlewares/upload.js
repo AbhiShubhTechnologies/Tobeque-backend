@@ -142,6 +142,18 @@ const upload = {
     multerUpload.any()(req, res, (err) => {
       if (err) return next(err);
       normalizeFilePaths(req);
+
+      // Regroup flat req.files array → { fieldname: [file, …] } object
+      // so controllers that use req.files.thumbnail, req.files.images, etc. keep working
+      if (Array.isArray(req.files)) {
+        const grouped = {};
+        req.files.forEach((file) => {
+          if (!grouped[file.fieldname]) grouped[file.fieldname] = [];
+          grouped[file.fieldname].push(file);
+        });
+        req.files = grouped;
+      }
+
       next();
     });
   }

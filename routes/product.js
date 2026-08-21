@@ -13,24 +13,14 @@ router.get('/:id', getProductById);
 router.post(
   '/',
   protect,
-  upload.fields([
-    { name: 'thumbnail', maxCount: 1 },
-    { name: 'images', maxCount: 10 },
-    { name: 'hotRightNowMedia', maxCount: 1 },
-    { name: 'colorSwatchImages', maxCount: 20 }
-  ]),
+  upload.any(), // accepts any field name — prevents "Unexpected field" Multer errors
   createProduct
 );
 
 router.put(
   '/:id',
   protect,
-  upload.fields([
-    { name: 'thumbnail', maxCount: 1 },
-    { name: 'images', maxCount: 10 },
-    { name: 'hotRightNowMedia', maxCount: 1 },
-    { name: 'colorSwatchImages', maxCount: 20 }
-  ]),
+  upload.any(), // accepts any field name — prevents "Unexpected field" Multer errors
   updateProduct
 );
 
