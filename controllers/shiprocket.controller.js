@@ -610,6 +610,8 @@ const getShiprocketOrderStatus = async (req, res, next) => {
   } catch (error) {
     next(error);
   }
+};
+
 // ─────────────────────────────────────────────────────────────────────────────
 // @desc    Test Shiprocket API Connection with current credentials
 // @route   GET /api/shipping/test-connection
