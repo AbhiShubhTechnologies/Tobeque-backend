@@ -24,10 +24,26 @@ const axios = require('axios');
 
 const SHIPROCKET_BASE_URL = 'https://apiv2.shiprocket.in/v1/external';
 
-// ─── In-memory token cache ────────────────────────────────────────────────────
+// ─── In-memory token cache & auth cool-off ──────────────────────────────────
 let cachedToken = null;
 let tokenExpiresAt = null; // UTC ms timestamp
+let lastAuthError = null;
+let authErrorTimestamp = 0;
+const AUTH_COOLOFF_MS = 2 * 60 * 1000; // 2 minute cool-off on auth failure to avoid spamming Shiprocket & resetting lock
+
 const mongoose = require('mongoose');
+
+/**
+ * Explicitly clear cached token and auth error cool-off.
+ * Called when credentials are saved/updated in Admin Settings or during connection test.
+ */
+const clearShiprocketTokenCache = () => {
+  cachedToken = null;
+  tokenExpiresAt = null;
+  lastAuthError = null;
+  authErrorTimestamp = 0;
+  console.log('[Shiprocket] 🔄 Token cache and authentication cool-off cleared.');
+};
 
 // Helper to resolve Shiprocket configuration from DB Settings or process.env
 const getShiprocketConfig = async () => {
@@ -44,10 +60,18 @@ const getShiprocketConfig = async () => {
     const map = {};
     settings.forEach((s) => { map[s.key] = s.value; });
 
-    if (map.shiprocketEmail) email = map.shiprocketEmail;
-    if (map.shiprocketPassword) password = map.shiprocketPassword;
-    if (map.shiprocketPickupPincode) pickupPincode = map.shiprocketPickupPincode;
-    if (map.shiprocketPickupLocation) pickupLocation = map.shiprocketPickupLocation;
+    if (map.shiprocketEmail !== undefined && map.shiprocketEmail !== null && String(map.shiprocketEmail).trim() !== '') {
+      email = map.shiprocketEmail;
+    }
+    if (map.shiprocketPassword !== undefined && map.shiprocketPassword !== null && String(map.shiprocketPassword).trim() !== '') {
+      password = map.shiprocketPassword;
+    }
+    if (map.shiprocketPickupPincode !== undefined && map.shiprocketPickupPincode !== null && String(map.shiprocketPickupPincode).trim() !== '') {
+      pickupPincode = map.shiprocketPickupPincode;
+    }
+    if (map.shiprocketPickupLocation !== undefined && map.shiprocketPickupLocation !== null && String(map.shiprocketPickupLocation).trim() !== '') {
+      pickupLocation = map.shiprocketPickupLocation;
+    }
   } catch (err) {
     // Ignore DB fetch failure and fallback to env
   }
@@ -68,6 +92,14 @@ const getShiprocketToken = async () => {
   // Return cached token if still valid (leaving 5 min buffer before expiry)
   if (cachedToken && tokenExpiresAt && Date.now() < tokenExpiresAt - 5 * 60 * 1000) {
     return cachedToken;
+  }
+
+  // Prevent spamming Shiprocket login endpoint if authentication recently failed (prevents resetting Shiprocket's temporary security lockout)
+  if (lastAuthError && Date.now() - authErrorTimestamp < AUTH_COOLOFF_MS) {
+    const elapsedSec = Math.ceil((AUTH_COOLOFF_MS - (Date.now() - authErrorTimestamp)) / 1000);
+    throw new Error(
+      `Shiprocket authentication cool-off in progress (${elapsedSec}s remaining). Previous error: "${lastAuthError}". Update credentials in Admin Settings to try immediately.`
+    );
   }
 
   const { email, password } = await getShiprocketConfig();
@@ -91,8 +123,9 @@ const getShiprocketToken = async () => {
     }
 
     cachedToken = token;
-    // Shiprocket tokens expire in 24 hours
-    tokenExpiresAt = Date.now() + 24 * 60 * 60 * 1000;
+    tokenExpiresAt = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
+    lastAuthError = null;
+    authErrorTimestamp = 0;
 
     console.log('[Shiprocket] ✅ Token refreshed successfully.');
     return token;
@@ -100,7 +133,19 @@ const getShiprocketToken = async () => {
     cachedToken = null;
     tokenExpiresAt = null;
     const msg = error.response?.data?.message || error.message;
+    lastAuthError = msg;
+    authErrorTimestamp = Date.now();
+
     console.error('[Shiprocket] ❌ Token generation failed:', msg);
+    
+    if (msg.includes('blocked') || msg.includes('login attempts')) {
+      throw new Error(
+        `Shiprocket authentication error: User blocked due to too many failed login attempts. ` +
+        `Shiprocket has temporarily locked API login for account "${email}". Please wait 15–30 minutes without sending requests, ` +
+        `or log in directly to app.shiprocket.in to unlock/reset your API password.`
+      );
+    }
+    
     throw new Error(`Shiprocket authentication error: ${msg}`);
   }
 };
@@ -110,7 +155,7 @@ const getShiprocketToken = async () => {
  */
 const getShiprocketClient = async () => {
   const token = await getShiprocketToken();
-  return axios.create({
+  const instance = axios.create({
     baseURL: SHIPROCKET_BASE_URL,
     headers: {
       'Content-Type': 'application/json',
@@ -118,6 +163,19 @@ const getShiprocketClient = async () => {
     },
     timeout: 30000
   });
+
+  instance.interceptors.response.use(
+    (response) => response,
+    (error) => {
+      if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+        console.warn('[Shiprocket] ⚠️ Received 401/403 response. Clearing token cache.');
+        clearShiprocketTokenCache();
+      }
+      return Promise.reject(error);
+    }
+  );
+
+  return instance;
 };
 
 // ─── Order Management ─────────────────────────────────────────────────────────
@@ -415,6 +473,8 @@ const generateManifest = async (shipmentIds) => {
 
 // ─── Exports ──────────────────────────────────────────────────────────────────
 module.exports = {
+  clearShiprocketTokenCache,
+  getShiprocketConfig,
   getShiprocketToken,
   createShiprocketOrder,
   checkServiceability,

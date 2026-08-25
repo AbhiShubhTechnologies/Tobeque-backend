@@ -1,4 +1,5 @@
 const { Setting, AdminLog } = require('../models');
+const shiprocket = require('../utils/shiprocket');
 
 // @desc    Get All System Settings
 // @route   GET /api/settings
@@ -40,6 +41,13 @@ const updateSettings = async (req, res, next) => {
     });
 
     await Promise.all(updatePromises);
+
+    // Reset Shiprocket in-memory auth token cache & cooloff so new credentials take effect immediately
+    try {
+      shiprocket.clearShiprocketTokenCache();
+    } catch (e) {
+      console.warn('[Settings] Failed to clear Shiprocket token cache:', e.message);
+    }
 
     await AdminLog.create({
       adminId: req.admin.id,
