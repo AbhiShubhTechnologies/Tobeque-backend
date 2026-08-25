@@ -13,7 +13,8 @@ const {
   checkOrderServiceability,
   getPickupAddresses,
   handleWebhook,
-  getShiprocketOrderStatus
+  getShiprocketOrderStatus,
+  testShiprocketConnection
 } = require('../controllers/shiprocket.controller');
 
 // ─── Public Routes (No Auth) ───────────────────────────────────────────────────────────
@@ -27,6 +28,7 @@ router.post('/webhook', handleWebhook);
 router.use(protect);
 
 // Utility
+router.get('/test-connection', testShiprocketConnection);
 router.get('/pickup-addresses', getPickupAddresses);
 
 // Per-order Shiprocket flow

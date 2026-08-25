@@ -610,6 +610,32 @@ const getShiprocketOrderStatus = async (req, res, next) => {
   } catch (error) {
     next(error);
   }
+// ─────────────────────────────────────────────────────────────────────────────
+// @desc    Test Shiprocket API Connection with current credentials
+// @route   GET /api/shipping/test-connection
+// @access  Private (Admin)
+// ─────────────────────────────────────────────────────────────────────────────
+const testShiprocketConnection = async (req, res, next) => {
+  try {
+    // Clear any cached token or error cool-off before testing
+    if (shiprocket.clearShiprocketTokenCache) {
+      shiprocket.clearShiprocketTokenCache();
+    }
+    const token = await shiprocket.getShiprocketToken();
+    const config = await shiprocket.getShiprocketConfig();
+
+    res.json({
+      success: true,
+      message: 'Shiprocket authentication successful! Credentials are valid.',
+      email: config.email,
+      pickupLocation: config.pickupLocation
+    });
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      error: error.message
+    });
+  }
 };
 
 module.exports = {
@@ -624,5 +650,6 @@ module.exports = {
   checkOrderServiceability,
   getPickupAddresses,
   handleWebhook,
-  getShiprocketOrderStatus
+  getShiprocketOrderStatus,
+  testShiprocketConnection
 };
