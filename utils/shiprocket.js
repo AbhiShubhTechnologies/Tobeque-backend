@@ -31,6 +31,9 @@ let lastAuthError = null;
 let authErrorTimestamp = 0;
 const AUTH_COOLOFF_MS = 2 * 60 * 1000; // 2 minute cool-off on auth failure to avoid spamming Shiprocket & resetting lock
 
+// ─── Cached pickup location (auto-fetched from Shiprocket) ───────────────────
+let cachedPickupLocation = null;
+
 const mongoose = require('mongoose');
 
 /**
@@ -42,7 +45,8 @@ const clearShiprocketTokenCache = () => {
   tokenExpiresAt = null;
   lastAuthError = null;
   authErrorTimestamp = 0;
-  console.log('[Shiprocket] 🔄 Token cache and authentication cool-off cleared.');
+  cachedPickupLocation = null; // also clear pickup location so it's re-fetched with new credentials
+  console.log('[Shiprocket] 🔄 Token cache, auth cool-off, and pickup location cache cleared.');
 };
 
 // Helper to resolve Shiprocket configuration from DB Settings or process.env
@@ -79,9 +83,50 @@ const getShiprocketConfig = async () => {
   return {
     email: (email || '').trim(),
     password: (password || '').trim(),
-    pickupPincode: (pickupPincode || '380015').trim(),
-    pickupLocation: (pickupLocation || 'Primary').trim()
+    pickupPincode: (pickupPincode || '').trim(),
+    pickupLocation: (pickupLocation || '').trim()
   };
+};
+
+/**
+ * Resolves the pickup location name to use for order creation.
+ * Priority: 1) Admin-saved setting (from dropdown selection) → 2) Auto-fetch first pickup address from Shiprocket → 3) 'Primary' fallback
+ * Auto-fetched result is cached in-memory and cleared when credentials change.
+ * @returns {string} Pickup location name
+ */
+const getFirstPickupLocation = async () => {
+  // 1. Check if admin has explicitly selected a pickup location in Settings
+  const config = await getShiprocketConfig();
+  if (config.pickupLocation) {
+    console.log(`[Shiprocket] 📍 Using saved pickup location: "${config.pickupLocation}"`);
+    return config.pickupLocation;
+  }
+
+  // 2. Return cached auto-fetched location if available
+  if (cachedPickupLocation) {
+    return cachedPickupLocation;
+  }
+
+  // 3. Auto-fetch from Shiprocket
+  try {
+    const client = await getShiprocketClient();
+    const response = await client.get('/settings/company/pickup');
+    const addresses = response.data?.data?.shipping_address;
+
+    if (Array.isArray(addresses) && addresses.length > 0) {
+      // Prefer the primary/default address if available, otherwise use first
+      const primary = addresses.find((a) => a.is_primary_location === 1) || addresses[0];
+      const locationName = primary.pickup_location || primary.location_name || String(primary.id);
+      cachedPickupLocation = locationName;
+      console.log(`[Shiprocket] 📍 Auto-resolved pickup location: "${locationName}"`);
+      return locationName;
+    }
+  } catch (err) {
+    console.warn('[Shiprocket] ⚠️ Could not auto-fetch pickup addresses:', err.message);
+  }
+
+  // 4. Absolute fallback
+  return 'Primary';
 };
 
 /**
@@ -226,7 +271,7 @@ const createShiprocketOrder = async (order, items) => {
   const payload = {
     order_id: order.orderNumber,
     order_date: new Date(order.createdAt).toISOString().split('T')[0],
-    pickup_location: config.pickupLocation || 'Primary',
+    pickup_location: await getFirstPickupLocation(),
 
     // Billing Details
     billing_customer_name: billingAddr?.name || shippingAddr?.name || order.user?.firstName || 'Customer',
