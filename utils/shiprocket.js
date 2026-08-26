@@ -272,9 +272,24 @@ const createShiprocketOrder = async (order, items) => {
 
   try {
     const response = await client.post('/orders/create/adhoc', payload);
-    console.log(`[Shiprocket] ✅ Order created for #${order.orderNumber}:`, response.data.order_id);
-    return response.data;
+    const data = response.data;
+
+    // Shiprocket sometimes returns HTTP 200 with an error payload or without order_id
+    // Treat these as failures so we don't silently save null IDs
+    if (!data || !data.order_id) {
+      const shiprocketMsg =
+        data?.message ||
+        (data?.errors ? JSON.stringify(data.errors) : null) ||
+        'Shiprocket did not return an order_id. The order may already exist on Shiprocket with this order number, or a validation error occurred.';
+      console.error(`[Shiprocket] ❌ No order_id returned for #${order.orderNumber}. Full response:`, JSON.stringify(data));
+      throw new Error(`Shiprocket order creation failed: ${shiprocketMsg}`);
+    }
+
+    console.log(`[Shiprocket] ✅ Order created for #${order.orderNumber}: order_id=${data.order_id}, shipment_id=${data.shipment_id}`);
+    return data;
   } catch (error) {
+    // Re-throw errors we already formatted above
+    if (error.message.startsWith('Shiprocket order creation failed:')) throw error;
     const msg = error.response?.data?.message || error.message;
     console.error(`[Shiprocket] ❌ Failed to create order for #${order.orderNumber}:`, msg);
     throw new Error(`Shiprocket order creation failed: ${msg}`);

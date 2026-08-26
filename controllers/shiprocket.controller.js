@@ -84,7 +84,8 @@ const pushOrderToShiprocket = async (req, res, next) => {
       return res.status(404).json({ success: false, error: 'Order not found' });
     }
 
-    if (order.shiprocketOrderId) {
+    // Only block if a real Shiprocket order ID is saved (not null from a previous failed push)
+    if (order.shiprocketOrderId && order.shiprocketOrderId !== 'null') {
       return res.status(400).json({
         success: false,
         error: `Order has already been pushed to Shiprocket (SR Order ID: ${order.shiprocketOrderId})`
