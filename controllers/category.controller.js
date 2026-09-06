@@ -3,6 +3,7 @@ const { deleteCloudinaryAsset, deleteCloudinaryAssets } = require('../utils/clou
 
 // Helper to slugify
 const slugify = (text) => {
+  if (!text) return '';
   return text
     .toString()
     .toLowerCase()
@@ -10,6 +11,44 @@ const slugify = (text) => {
     .replace(/\s+/g, '-')
     .replace(/[^\w\-]+/g, '')
     .replace(/\-\-+/g, '-');
+};
+
+// Helper to generate unique category slug
+const generateUniqueCategorySlug = async (text, currentId = null) => {
+  let baseSlug = slugify(text);
+  if (!baseSlug) baseSlug = 'category';
+  
+  let slug = baseSlug;
+  let counter = 1;
+  while (true) {
+    const existing = await Category.findOne({ 
+      slug, 
+      ...(currentId ? { _id: { $ne: currentId } } : {}) 
+    });
+    if (!existing) break;
+    counter++;
+    slug = `${baseSlug}-${counter}`;
+  }
+  return slug;
+};
+
+// Helper to generate unique brand slug
+const generateUniqueBrandSlug = async (text, currentId = null) => {
+  let baseSlug = slugify(text);
+  if (!baseSlug) baseSlug = 'brand';
+  
+  let slug = baseSlug;
+  let counter = 1;
+  while (true) {
+    const existing = await Brand.findOne({ 
+      slug, 
+      ...(currentId ? { _id: { $ne: currentId } } : {}) 
+    });
+    if (!existing) break;
+    counter++;
+    slug = `${baseSlug}-${counter}`;
+  }
+  return slug;
 };
 
 // === CATEGORIES MODULE ===
@@ -41,9 +80,26 @@ const getCategories = async (req, res, next) => {
 // @access  Private
 const createCategory = async (req, res, next) => {
   try {
-    const { name, description, descriptionSections, parentId, seoTitle, seoDescription } = req.body;
+    const { name, slug: customSlug, description, descriptionSections, parentId, seoTitle, seoDescription } = req.body;
 
-    const slug = slugify(name) + '-' + Math.floor(Math.random() * 1000);
+    if (!name) {
+      return res.status(400).json({ success: false, error: 'Category name is required' });
+    }
+
+    let slug;
+    if (customSlug && customSlug.trim() !== '') {
+      const cleanSlug = slugify(customSlug);
+      const existing = await Category.findOne({ slug: cleanSlug });
+      if (existing) {
+        return res.status(400).json({
+          success: false,
+          error: `Category slug '${cleanSlug}' is already in use by category "${existing.name}". Please choose a different slug.`
+        });
+      }
+      slug = cleanSlug;
+    } else {
+      slug = await generateUniqueCategorySlug(name);
+    }
 
     let image = '';
     let banner = '';
@@ -93,6 +149,13 @@ const createCategory = async (req, res, next) => {
       category
     });
   } catch (error) {
+    if (error.code === 11000) {
+      const val = error.keyValue ? error.keyValue.slug || Object.values(error.keyValue)[0] : '';
+      return res.status(400).json({
+        success: false,
+        error: `A category with slug '${val}' already exists. Please enter a unique slug.`
+      });
+    }
     next(error);
   }
 };
@@ -108,17 +171,26 @@ const updateCategory = async (req, res, next) => {
       return res.status(404).json({ success: false, error: 'Category not found' });
     }
 
-    const { name, slug, description, descriptionSections, parentId, seoTitle, seoDescription } = req.body;
+    const { name, slug: customSlug, description, descriptionSections, parentId, seoTitle, seoDescription } = req.body;
 
-    if (name && name !== category.name) {
+    if (name) {
       category.name = name;
-      if (!slug) {
-        category.slug = slugify(name) + '-' + Math.floor(Math.random() * 1000);
-      }
     }
 
-    if (slug && slug !== category.slug) {
-      category.slug = slugify(slug);
+    if (customSlug !== undefined && customSlug.trim() !== '') {
+      const newSlug = slugify(customSlug);
+      if (newSlug !== category.slug) {
+        const existing = await Category.findOne({ slug: newSlug, _id: { $ne: category._id } });
+        if (existing) {
+          return res.status(400).json({
+            success: false,
+            error: `Category slug '${newSlug}' is already in use by category "${existing.name}". Please choose a different slug.`
+          });
+        }
+        category.slug = newSlug;
+      }
+    } else if (name && name !== category.name) {
+      category.slug = await generateUniqueCategorySlug(name, category._id);
     }
 
     category.description = description !== undefined ? description : category.description;
@@ -168,6 +240,13 @@ const updateCategory = async (req, res, next) => {
       category
     });
   } catch (error) {
+    if (error.code === 11000) {
+      const val = error.keyValue ? error.keyValue.slug || Object.values(error.keyValue)[0] : '';
+      return res.status(400).json({
+        success: false,
+        error: `A category with slug '${val}' already exists. Please enter a unique slug.`
+      });
+    }
     next(error);
   }
 };
@@ -232,7 +311,10 @@ const getBrands = async (req, res, next) => {
 const createBrand = async (req, res, next) => {
   try {
     const { name, description } = req.body;
-    const slug = slugify(name) + '-' + Math.floor(Math.random() * 1000);
+    if (!name) {
+      return res.status(400).json({ success: false, error: 'Brand name is required' });
+    }
+    const slug = await generateUniqueBrandSlug(name);
 
     let logo = '';
     if (req.file) {
@@ -259,6 +341,13 @@ const createBrand = async (req, res, next) => {
       brand
     });
   } catch (error) {
+    if (error.code === 11000) {
+      const val = error.keyValue ? error.keyValue.slug || Object.values(error.keyValue)[0] : '';
+      return res.status(400).json({
+        success: false,
+        error: `A brand with slug '${val}' already exists. Please enter a unique slug.`
+      });
+    }
     next(error);
   }
 };
@@ -277,7 +366,7 @@ const updateBrand = async (req, res, next) => {
 
     if (name && name !== brand.name) {
       brand.name = name;
-      brand.slug = slugify(name) + '-' + Math.floor(Math.random() * 1000);
+      brand.slug = await generateUniqueBrandSlug(name, brand._id);
     }
 
     brand.description = description !== undefined ? description : brand.description;
@@ -302,6 +391,13 @@ const updateBrand = async (req, res, next) => {
       brand
     });
   } catch (error) {
+    if (error.code === 11000) {
+      const val = error.keyValue ? error.keyValue.slug || Object.values(error.keyValue)[0] : '';
+      return res.status(400).json({
+        success: false,
+        error: `A brand with slug '${val}' already exists. Please enter a unique slug.`
+      });
+    }
     next(error);
   }
 };

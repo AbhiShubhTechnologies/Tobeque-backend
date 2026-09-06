@@ -3,6 +3,7 @@ const { deleteCloudinaryAsset, deleteCloudinaryAssets } = require('../utils/clou
 
 // Helper to slugify strings
 const slugify = (text) => {
+  if (!text) return '';
   return text
     .toString()
     .toLowerCase()
@@ -10,6 +11,25 @@ const slugify = (text) => {
     .replace(/\s+/g, '-') // Replace spaces with -
     .replace(/[^\w\-]+/g, '') // Remove all non-word chars
     .replace(/\-\-+/g, '-'); // Replace multiple - with single -
+};
+
+// Helper to generate unique product slug
+const generateUniqueProductSlug = async (text, currentId = null) => {
+  let baseSlug = slugify(text);
+  if (!baseSlug) baseSlug = 'product';
+  
+  let slug = baseSlug;
+  let counter = 1;
+  while (true) {
+    const existing = await Product.findOne({ 
+      slug, 
+      ...(currentId ? { _id: { $ne: currentId } } : {}) 
+    });
+    if (!existing) break;
+    counter++;
+    slug = `${baseSlug}-${counter}`;
+  }
+  return slug;
 };
 
 // @desc    Get List of Products
@@ -257,7 +277,12 @@ const createProduct = async (req, res, next) => {
     }
 
     // Auto slug
-    const slug = customSlug ? slugify(customSlug) : (slugify(name) + '-' + Math.floor(Math.random() * 1000));
+    let slug;
+    if (customSlug && customSlug.trim() !== '') {
+      slug = slugify(customSlug);
+    } else {
+      slug = await generateUniqueProductSlug(name);
+    }
 
     // Get thumbnail from uploaded files (Multer saves to req.file or req.files)
     let thumbnail = '';
@@ -525,11 +550,11 @@ const updateProduct = async (req, res, next) => {
 
     const { slug: customSlug, seoKeywords, seoSchema, imageAltTag } = req.body;
 
-    if (customSlug && customSlug !== product.slug) {
+    if (customSlug && customSlug.trim() !== '') {
       product.slug = slugify(customSlug);
     } else if (name && name !== product.name && !customSlug) {
       product.name = name;
-      product.slug = slugify(name) + '-' + Math.floor(Math.random() * 1000);
+      product.slug = await generateUniqueProductSlug(name, product._id);
     } else if (name) {
       product.name = name;
     }
