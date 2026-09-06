@@ -58,17 +58,27 @@ const generateUniqueBrandSlug = async (text, currentId = null) => {
 // @access  Private
 const getCategories = async (req, res, next) => {
   try {
-    // Fetch only root categories (parentId = null) and recursively include their subcategories
-    const categories = await Category.find({ parentId: null })
-      .populate({
-        path: 'subcategories',
-        populate: { path: 'subcategories' }
-      })
-      .sort({ createdAt: 1 });
+    const allCats = await Category.find().lean().sort({ createdAt: 1 });
+
+    const catMap = {};
+    allCats.forEach(c => {
+      c.id = c._id.toString();
+      c.subcategories = [];
+      catMap[c.id] = c;
+    });
+
+    const rootCategories = [];
+    allCats.forEach(c => {
+      if (c.parentId && catMap[c.parentId.toString()]) {
+        catMap[c.parentId.toString()].subcategories.push(c);
+      } else {
+        rootCategories.push(c);
+      }
+    });
 
     res.json({
       success: true,
-      categories
+      categories: rootCategories
     });
   } catch (error) {
     next(error);
@@ -91,10 +101,9 @@ const createCategory = async (req, res, next) => {
       const cleanSlug = slugify(customSlug);
       const existing = await Category.findOne({ slug: cleanSlug });
       if (existing) {
-        return res.status(400).json({
-          success: false,
-          error: `Category slug '${cleanSlug}' is already in use by category "${existing.name}". Please choose a different slug.`
-        });
+        // Free up cleanSlug by auto-renaming existing category's slug
+        existing.slug = await generateUniqueCategorySlug(`${existing.slug}-old`, existing._id);
+        await existing.save();
       }
       slug = cleanSlug;
     } else {
@@ -182,10 +191,9 @@ const updateCategory = async (req, res, next) => {
       if (newSlug !== category.slug) {
         const existing = await Category.findOne({ slug: newSlug, _id: { $ne: category._id } });
         if (existing) {
-          return res.status(400).json({
-            success: false,
-            error: `Category slug '${newSlug}' is already in use by category "${existing.name}". Please choose a different slug.`
-          });
+          // Free up newSlug by auto-renaming the duplicate category's slug
+          existing.slug = await generateUniqueCategorySlug(`${existing.slug}-old`, existing._id);
+          await existing.save();
         }
         category.slug = newSlug;
       }

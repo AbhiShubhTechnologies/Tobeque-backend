@@ -9,6 +9,16 @@ const errorHandler = (err, req, res, next) => {
     });
   }
 
+  // MongoDB Duplicate Key Error (Code 11000)
+  if (err.code === 11000) {
+    const field = Object.keys(err.keyPattern || err.keyValue || {})[0] || 'slug';
+    const val = err.keyValue ? err.keyValue[field] : '';
+    return res.status(400).json({
+      success: false,
+      error: `A record with ${field} '${val}' already exists. Please choose a different ${field}.`
+    });
+  }
+
   // Sequelize Unique Constraint Validation
   if (err.name === 'SequelizeUniqueConstraintError') {
     return res.status(400).json({
