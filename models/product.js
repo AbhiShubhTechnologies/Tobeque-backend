@@ -127,6 +127,38 @@ const ProductSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  twitterTitle: {
+    type: String,
+    default: ''
+  },
+  twitterDescription: {
+    type: String,
+    default: ''
+  },
+  twitterImage: {
+    type: String,
+    default: ''
+  },
+  twitterCard: {
+    type: String,
+    default: 'summary_large_image'
+  },
+  ogTitle: {
+    type: String,
+    default: ''
+  },
+  ogDescription: {
+    type: String,
+    default: ''
+  },
+  ogImage: {
+    type: String,
+    default: ''
+  },
+  ogType: {
+    type: String,
+    default: 'product'
+  },
   imageAltTag: {
     type: String,
     default: ''

@@ -33,6 +33,46 @@ const CategorySchema = new mongoose.Schema({
   },
   seoDescription: {
     type: String
+  },
+  seoKeywords: {
+    type: String,
+    default: ''
+  },
+  seoSchema: {
+    type: String,
+    default: ''
+  },
+  twitterTitle: {
+    type: String,
+    default: ''
+  },
+  twitterDescription: {
+    type: String,
+    default: ''
+  },
+  twitterImage: {
+    type: String,
+    default: ''
+  },
+  twitterCard: {
+    type: String,
+    default: 'summary_large_image'
+  },
+  ogTitle: {
+    type: String,
+    default: ''
+  },
+  ogDescription: {
+    type: String,
+    default: ''
+  },
+  ogImage: {
+    type: String,
+    default: ''
+  },
+  ogType: {
+    type: String,
+    default: 'website'
   }
 }, {
   timestamps: true,
