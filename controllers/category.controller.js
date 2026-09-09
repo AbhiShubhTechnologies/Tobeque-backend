@@ -90,7 +90,7 @@ const getCategories = async (req, res, next) => {
 // @access  Private
 const createCategory = async (req, res, next) => {
   try {
-    const { name, slug: customSlug, description, descriptionSections, parentId, seoTitle, seoDescription, seoKeywords, seoSchema, twitterTitle, twitterDescription, twitterImage, twitterCard, ogTitle, ogDescription, ogImage, ogType } = req.body;
+    const { name, slug: customSlug, description, descriptionSections, parentId, seoTitle, seoDescription, seoKeywords, seoSchema, twitterMeta, twitterTitle, twitterDescription, twitterImage, twitterCard, ogMeta, ogTitle, ogDescription, ogImage, ogType } = req.body;
 
     if (!name) {
       return res.status(400).json({ success: false, error: 'Category name is required' });
@@ -145,10 +145,12 @@ const createCategory = async (req, res, next) => {
       seoDescription,
       seoKeywords,
       seoSchema,
+      twitterMeta,
       twitterTitle,
       twitterDescription,
       twitterImage,
       twitterCard,
+      ogMeta,
       ogTitle,
       ogDescription,
       ogImage,
@@ -190,7 +192,7 @@ const updateCategory = async (req, res, next) => {
       return res.status(404).json({ success: false, error: 'Category not found' });
     }
 
-    const { name, slug: customSlug, description, descriptionSections, parentId, seoTitle, seoDescription, seoKeywords, seoSchema, twitterTitle, twitterDescription, twitterImage, twitterCard, ogTitle, ogDescription, ogImage, ogType } = req.body;
+    const { name, slug: customSlug, description, descriptionSections, parentId, seoTitle, seoDescription, seoKeywords, seoSchema, twitterMeta, twitterTitle, twitterDescription, twitterImage, twitterCard, ogMeta, ogTitle, ogDescription, ogImage, ogType } = req.body;
 
     if (name) {
       category.name = name;
@@ -225,10 +227,12 @@ const updateCategory = async (req, res, next) => {
     category.seoDescription = seoDescription !== undefined ? seoDescription : category.seoDescription;
     category.seoKeywords = seoKeywords !== undefined ? seoKeywords : category.seoKeywords;
     category.seoSchema = seoSchema !== undefined ? seoSchema : category.seoSchema;
+    category.twitterMeta = twitterMeta !== undefined ? twitterMeta : category.twitterMeta;
     category.twitterTitle = twitterTitle !== undefined ? twitterTitle : category.twitterTitle;
     category.twitterDescription = twitterDescription !== undefined ? twitterDescription : category.twitterDescription;
     category.twitterImage = twitterImage !== undefined ? twitterImage : category.twitterImage;
     category.twitterCard = twitterCard !== undefined ? twitterCard : category.twitterCard;
+    category.ogMeta = ogMeta !== undefined ? ogMeta : category.ogMeta;
     category.ogTitle = ogTitle !== undefined ? ogTitle : category.ogTitle;
     category.ogDescription = ogDescription !== undefined ? ogDescription : category.ogDescription;
     category.ogImage = ogImage !== undefined ? ogImage : category.ogImage;

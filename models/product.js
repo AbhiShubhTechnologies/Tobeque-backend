@@ -127,6 +127,10 @@ const ProductSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  twitterMeta: {
+    type: String,
+    default: ''
+  },
   twitterTitle: {
     type: String,
     default: ''
@@ -142,6 +146,10 @@ const ProductSchema = new mongoose.Schema({
   twitterCard: {
     type: String,
     default: 'summary_large_image'
+  },
+  ogMeta: {
+    type: String,
+    default: ''
   },
   ogTitle: {
     type: String,
