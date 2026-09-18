@@ -181,9 +181,30 @@ const deleteBanner = async (req, res, next) => {
   }
 };
 
+// @desc    Upload misc image (e.g., for push notifications)
+// @route   POST /api/banners/upload-misc
+// @access  Private
+const uploadMiscImage = async (req, res, next) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, error: 'No image provided' });
+    }
+    
+    res.status(200).json({
+      success: true,
+      url: req.file.path,
+      imageUrl: req.file.path,
+      path: req.file.path
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getBanners,
   createBanner,
   updateBanner,
-  deleteBanner
+  deleteBanner,
+  uploadMiscImage
 };

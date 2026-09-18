@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { getBanners, createBanner, updateBanner, deleteBanner } = require('../controllers/banner.controller');
+const { getBanners, createBanner, updateBanner, deleteBanner, uploadMiscImage } = require('../controllers/banner.controller');
 const { protect, authorize } = require('../middlewares/auth');
 const upload = require('../middlewares/upload');
 
@@ -11,6 +11,7 @@ router.get('/', getBanners);
 router.use(protect);
 
 router.post('/', upload.fields([{ name: 'image', maxCount: 1 }, { name: 'mobileImage', maxCount: 1 }]), createBanner);
+router.post('/upload-misc', upload.single('image'), uploadMiscImage);
 router.put('/:id', upload.fields([{ name: 'image', maxCount: 1 }, { name: 'mobileImage', maxCount: 1 }]), updateBanner);
 router.delete('/:id', authorize('superadmin', 'manager'), deleteBanner);
 
