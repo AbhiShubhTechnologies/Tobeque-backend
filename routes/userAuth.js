@@ -11,7 +11,9 @@ const {
   uploadProfilePhoto,
   createRazorpayOrder,
   verifyRazorpayPayment,
-  getRazorpayConfig
+  getRazorpayConfig,
+  updateFcmToken,
+  removeFcmToken
 } = require('../controllers/userAuth.controller');
 const { protectUser } = require('../middlewares/userAuth');
 const upload = require('../middlewares/upload');
@@ -30,5 +32,9 @@ router.post('/orders', protectUser, createOrder);
 router.post('/profile/photo', protectUser, upload.single('photo'), uploadProfilePhoto);
 router.post('/razorpay/create-order', protectUser, createRazorpayOrder);
 router.post('/razorpay/verify', protectUser, verifyRazorpayPayment);
+
+// Push notification FCM token management
+router.put('/fcm-token', protectUser, updateFcmToken);
+router.delete('/fcm-token', protectUser, removeFcmToken);
 
 module.exports = router;

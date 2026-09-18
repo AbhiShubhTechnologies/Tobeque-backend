@@ -29,3 +29,6 @@ dist
 .cache
 .vite/
 database.sqlite
+
+# Firebase Service Account (SENSITIVE - Never commit this)
+config/firebase-service-account.json

@@ -743,6 +743,50 @@ const verifyRazorpayPayment = async (req, res, next) => {
   }
 };
 
+// @desc    Update/Register FCM Token for push notifications
+// @route   PUT /api/user-auth/fcm-token
+// @access  Private (user)
+const updateFcmToken = async (req, res, next) => {
+  try {
+    const { fcmToken, devicePlatform } = req.body;
+
+    if (!fcmToken || typeof fcmToken !== 'string' || fcmToken.trim().length < 10) {
+      return res.status(400).json({ success: false, error: 'Valid FCM token is required' });
+    }
+
+    const validPlatforms = ['android', 'ios', 'web'];
+    const platform = validPlatforms.includes(devicePlatform) ? devicePlatform : null;
+
+    await User.findByIdAndUpdate(
+      req.user.id,
+      {
+        fcmToken: fcmToken.trim(),
+        ...(platform && { devicePlatform: platform })
+      },
+      { new: true }
+    );
+
+    return res.json({
+      success: true,
+      message: 'FCM token registered successfully'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Remove FCM Token on logout
+// @route   DELETE /api/user-auth/fcm-token
+// @access  Private (user)
+const removeFcmToken = async (req, res, next) => {
+  try {
+    await User.findByIdAndUpdate(req.user.id, { fcmToken: null, devicePlatform: null });
+    return res.json({ success: true, message: 'FCM token removed' });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   sendOtp,
   verifyOtp,
@@ -754,5 +798,7 @@ module.exports = {
   uploadProfilePhoto,
   createRazorpayOrder,
   verifyRazorpayPayment,
-  getRazorpayConfig
+  getRazorpayConfig,
+  updateFcmToken,
+  removeFcmToken
 };

@@ -7,6 +7,7 @@ const fs = require('fs');
 require('dotenv').config();
 
 const { testConnection } = require('./config/db');
+const { initializeFirebase } = require('./config/firebase');
 const errorHandler = require('./middlewares/errorHandler');
 
 const app = express();
@@ -146,6 +147,7 @@ app.use('/api/job-postings', require('./routes/jobPosting'));
 app.use('/api/community-styles', require('./routes/communityStyle'));
 app.use('/api/about-us', require('./routes/aboutUs'));
 app.use('/api/contact', require('./routes/contact'));
+app.use('/api/notifications', require('./routes/notification'));
 
 // Root Status check
 app.get('/api/status', (req, res) => {
@@ -162,7 +164,10 @@ app.use(errorHandler);
 // Connect DB & Start Server
 const startServer = async () => {
   try {
-    // 1. Authenticate connection (MongoDB)
+    // 1. Initialize Firebase Admin SDK (push notifications)
+    initializeFirebase();
+
+    // 2. Authenticate connection (MongoDB)
     await testConnection();
 
     // 2. Bind port and start listening

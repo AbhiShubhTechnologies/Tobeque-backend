@@ -62,6 +62,18 @@ const UserSchema = new mongoose.Schema({
   },
   profilePhoto: {
     type: String
+  },
+  // Firebase Cloud Messaging token for push notifications
+  fcmToken: {
+    type: String,
+    default: null,
+    index: true
+  },
+  // Platform tracking for segmented notifications
+  devicePlatform: {
+    type: String,
+    enum: ['android', 'ios', 'web', null],
+    default: null
   }
 }, {
   timestamps: true,
