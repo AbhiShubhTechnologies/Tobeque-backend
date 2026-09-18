@@ -209,26 +209,56 @@ const getUserProfile = async (req, res, next) => {
   }
 };
 
-// @desc    Get logged-in user's order history
+// @desc    Get logged-in user's order history (by user ID + phone number match in shipping address)
 // @route   GET /api/user-auth/orders
 // @access  Private (user)
 const getUserOrders = async (req, res, next) => {
   try {
-    const orders = await Order.find({ user: req.user.id })
+    // 1. Orders directly linked to this user account
+    const userOrders = await Order.find({ user: req.user.id })
       .sort('-createdAt')
       .populate({
         path: 'items',
-        populate: {
-          path: 'product',
-          select: 'name thumbnail'
-        }
+        populate: { path: 'product', select: 'name thumbnail' }
       });
 
-    res.json({ success: true, orders });
+    // 2. Orders placed via the website with same phone number (stored in shippingAddress JSON)
+    const user = await require('../models').User.findById(req.user.id).select('phone');
+    let phoneOrders = [];
+    if (user && user.phone) {
+      const cleanPhone = String(user.phone).replace(/[^0-9]/g, '');
+      // Match phone in shippingAddress JSON string (covers "phone":"...10digits..." patterns)
+      if (cleanPhone.length >= 10) {
+        const last10 = cleanPhone.slice(-10);
+        phoneOrders = await Order.find({
+          user: { $ne: req.user.id }, // not already in userOrders
+          shippingAddress: { $regex: last10, $options: 'i' }
+        })
+          .sort('-createdAt')
+          .populate({
+            path: 'items',
+            populate: { path: 'product', select: 'name thumbnail' }
+          });
+      }
+    }
+
+    // 3. Merge and deduplicate by order _id, sort by createdAt desc
+    const seen = new Set(userOrders.map(o => o._id.toString()));
+    const combined = [...userOrders];
+    for (const o of phoneOrders) {
+      if (!seen.has(o._id.toString())) {
+        combined.push(o);
+        seen.add(o._id.toString());
+      }
+    }
+    combined.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    res.json({ success: true, orders: combined });
   } catch (error) {
     next(error);
   }
 };
+
 
 // @desc    Update user profile details (name, email, address, sizes)
 // @route   PUT /api/user-auth/profile
