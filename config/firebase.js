@@ -1,19 +1,22 @@
 /**
  * config/firebase.js
  * ─────────────────────────────────────────────────────────────
- * Initializes the Firebase Admin SDK using a service account.
+ * Initializes the Firebase Admin SDK.
  *
- * SETUP STEPS (once you have the credentials):
- * 1. Go to: Firebase Console → Project Settings → Service Accounts
- * 2. Click "Generate new private key" → download the JSON file
- * 3. Rename the file to: firebase-service-account.json
- * 4. Place it in: backend/config/firebase-service-account.json
- * 5. Add to .env:
- *       FIREBASE_PROJECT_ID=your_project_id
- *       FIREBASE_SERVICE_ACCOUNT_PATH=./config/firebase-service-account.json
+ * TWO WAYS TO PROVIDE CREDENTIALS (in priority order):
+ *
+ * ── Option A: Environment Variable (RECOMMENDED for production/Hostinger) ──
+ *   Set FIREBASE_SERVICE_ACCOUNT_JSON in your Hostinger .env panel.
+ *   Value = the entire content of firebase-service-account.json as one line.
+ *
+ *   Example .env entry:
+ *   FIREBASE_SERVICE_ACCOUNT_JSON={"type":"service_account","project_id":"tobeque-app",...}
+ *
+ * ── Option B: Local File (for local development only) ──
+ *   Place the file at: backend/config/firebase-service-account.json
+ *   This file is gitignored and never pushed to GitHub.
  *
  * ⚠️  NEVER commit firebase-service-account.json to Git.
- *     It is already listed in .gitignore via this implementation.
  * ─────────────────────────────────────────────────────────────
  */
 
@@ -23,6 +26,42 @@ const fs = require('fs');
 
 let firebaseApp = null;
 let messaging = null;
+
+/**
+ * Loads the service account object from either:
+ * 1. FIREBASE_SERVICE_ACCOUNT_JSON env var (production)
+ * 2. Local file at FIREBASE_SERVICE_ACCOUNT_PATH (local dev)
+ */
+const loadServiceAccount = () => {
+  // ── Priority 1: JSON string from environment variable ──────────────────────
+  if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
+    try {
+      return JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
+    } catch (e) {
+      console.error('[Firebase] Failed to parse FIREBASE_SERVICE_ACCOUNT_JSON env var:', e.message);
+      return null;
+    }
+  }
+
+  // ── Priority 2: Local file (development) ───────────────────────────────────
+  const serviceAccountPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH
+    ? path.resolve(process.cwd(), process.env.FIREBASE_SERVICE_ACCOUNT_PATH)
+    : path.join(__dirname, 'firebase-service-account.json');
+
+  if (!fs.existsSync(serviceAccountPath)) {
+    console.warn(`\n⚠️  [Firebase] No credentials found.`);
+    console.warn(`   Set FIREBASE_SERVICE_ACCOUNT_JSON in your Hostinger environment variables.`);
+    console.warn(`   Or place firebase-service-account.json at: ${serviceAccountPath}\n`);
+    return null;
+  }
+
+  try {
+    return JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
+  } catch (e) {
+    console.error('[Firebase] Failed to read service account file:', e.message);
+    return null;
+  }
+};
 
 /**
  * Initializes Firebase Admin SDK (idempotent — safe to call multiple times).
@@ -36,37 +75,20 @@ const initializeFirebase = () => {
     return;
   }
 
-  const serviceAccountPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH
-    ? path.resolve(process.cwd(), process.env.FIREBASE_SERVICE_ACCOUNT_PATH)
-    : path.join(__dirname, 'firebase-service-account.json');
-
-  if (!fs.existsSync(serviceAccountPath)) {
-    console.warn(
-      `\n⚠️  [Firebase] Service account file not found at: ${serviceAccountPath}`
-    );
-    console.warn(
-      '   Push notifications will NOT work until you add the service account JSON.'
-    );
-    console.warn(
-      '   See backend/config/firebase.js for setup instructions.\n'
-    );
+  const serviceAccount = loadServiceAccount();
+  if (!serviceAccount) {
+    console.warn('[Firebase] Push notifications are DISABLED — no credentials provided.');
     return;
   }
 
   try {
-    const serviceAccount = JSON.parse(
-      fs.readFileSync(serviceAccountPath, 'utf8')
-    );
-
     firebaseApp = admin.initializeApp({
       credential: admin.credential.cert(serviceAccount),
       projectId: process.env.FIREBASE_PROJECT_ID || serviceAccount.project_id
     });
 
     messaging = admin.messaging(firebaseApp);
-    console.log(
-      `[Firebase] Admin SDK initialized successfully for project: ${serviceAccount.project_id}`
-    );
+    console.log(`[Firebase] ✅ Admin SDK initialized for project: ${serviceAccount.project_id}`);
   } catch (err) {
     console.error('[Firebase] Failed to initialize Admin SDK:', err.message);
   }
