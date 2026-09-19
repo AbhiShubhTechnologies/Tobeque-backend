@@ -9,11 +9,12 @@ const crypto = require('crypto');
 const DEV_OTP = '123456';
 const OTP_EXPIRY_MINUTES = 30;
 
-const generateUserToken = (id) => {
+const generateUserToken = (id, client = 'app') => {
+  const isWeb = client === 'web';
   return jwt.sign(
-    { id, type: 'user' },
+    { id, type: 'user', client: isWeb ? 'web' : 'app' },
     process.env.JWT_SECRET || 'supersecretjwtsecretkeyshouldbecomplex39284',
-    { expiresIn: process.env.JWT_EXPIRE || '7d' }
+    { expiresIn: isWeb ? '24h' : (process.env.USER_JWT_EXPIRE || '365d') }
   );
 };
 
@@ -105,12 +106,17 @@ const verifyOtp = async (req, res, next) => {
       return res.status(401).json({ success: false, error: 'OTP has expired. Please request a new one.' });
     }
 
-    // Clear OTP after successful use
+    // Clear OTP after successful use & record activity
     user.otpCode = null;
     user.otpExpiry = null;
+    user.lastActiveAt = new Date();
     await user.save();
 
-    const token = generateUserToken(user.id);
+    const clientHeader = (req.headers['x-client-platform'] || '').toLowerCase();
+    const platformBody = (req.body.platform || req.body.client || '').toLowerCase();
+    const client = (clientHeader === 'web' || platformBody === 'web') ? 'web' : 'app';
+
+    const token = generateUserToken(user.id, client);
 
     res.json({
       success: true,

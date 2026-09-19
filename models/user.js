@@ -74,6 +74,11 @@ const UserSchema = new mongoose.Schema({
     type: String,
     enum: ['android', 'ios', 'web', null],
     default: null
+  },
+  // Timestamp of user's last activity for sliding inactivity session expiration
+  lastActiveAt: {
+    type: Date,
+    default: Date.now
   }
 }, {
   timestamps: true,

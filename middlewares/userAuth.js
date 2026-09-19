@@ -41,6 +41,36 @@ const protectUser = async (req, res, next) => {
         });
       }
 
+      const clientType = decoded.client || 'app';
+      const now = Date.now();
+      const lastActive = req.user.lastActiveAt ? new Date(req.user.lastActiveAt).getTime() : now;
+
+      if (clientType === 'web') {
+        // Web sessions expire after 24 hours of inactivity or token age
+        const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
+        if (now - lastActive > TWENTY_FOUR_HOURS_MS) {
+          return res.status(401).json({
+            success: false,
+            error: 'Web session expired (24 hours inactivity limit). Please log in again.'
+          });
+        }
+      } else {
+        // App client — 7-day rolling inactivity window
+        const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+        if (now - lastActive > SEVEN_DAYS_MS) {
+          return res.status(401).json({
+            success: false,
+            error: 'Session expired due to 7 days of inactivity. Please log in again.'
+          });
+        }
+      }
+
+      // Update lastActiveAt if more than 5 minutes have passed since last update (avoids DB spamming)
+      if (!req.user.lastActiveAt || now - lastActive > 5 * 60 * 1000) {
+        req.user.lastActiveAt = new Date();
+        await req.user.save().catch((err) => console.error('Error updating lastActiveAt:', err));
+      }
+
       next();
     } catch (error) {
       return res.status(401).json({
