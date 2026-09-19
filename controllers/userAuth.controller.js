@@ -18,6 +18,27 @@ const generateUserToken = (id, client = 'app') => {
   );
 };
 
+// Standardize Indian phone number formats (+919876543210, 9876543210, etc.)
+const normalizePhone = (p) => {
+  if (!p) return '';
+  const digits = String(p).replace(/\D/g, '');
+  const last10 = digits.slice(-10);
+  return last10 ? `+91${last10}` : String(p).trim();
+};
+
+const getPhoneSearchQuery = (p) => {
+  const digits = String(p).replace(/\D/g, '');
+  const last10 = digits.slice(-10);
+  if (!last10) return { phone: String(p).trim() };
+  return {
+    $or: [
+      { phone: `+91${last10}` },
+      { phone: last10 },
+      { phone: String(p).trim() }
+    ]
+  };
+};
+
 // @desc    Send OTP to mobile number
 // @route   POST /api/user-auth/send-otp
 // @access  Public
@@ -29,8 +50,8 @@ const sendOtp = async (req, res, next) => {
       return res.status(400).json({ success: false, error: 'Phone number is required' });
     }
 
-    // Normalize phone: remove spaces/dashes, ensure no leading zeros issue
-    const normalizedPhone = String(phone).replace(/\s+/g, '').replace(/-/g, '');
+    const normalizedPhone = normalizePhone(phone);
+    const searchQuery = getPhoneSearchQuery(phone);
 
     // Generate random 6-digit OTP or fallback to DEV_OTP if no Fast2SMS key
     const generatedOtp = process.env.FAST2SMS_API_KEY
@@ -38,7 +59,7 @@ const sendOtp = async (req, res, next) => {
       : DEV_OTP;
 
     // Find or create user by phone
-    let user = await User.findOne({ phone: normalizedPhone });
+    let user = await User.findOne(searchQuery);
 
     if (!user) {
       user = await User.create({
@@ -48,6 +69,9 @@ const sendOtp = async (req, res, next) => {
         password: generatedOtp,
         status: 'active'
       });
+    } else if (user.phone !== normalizedPhone) {
+      // Normalize stored phone number format
+      user.phone = normalizedPhone;
     }
 
     if (user.status === 'blocked') {
@@ -84,9 +108,8 @@ const verifyOtp = async (req, res, next) => {
       return res.status(400).json({ success: false, error: 'Phone number and OTP are required' });
     }
 
-    const normalizedPhone = String(phone).replace(/\s+/g, '').replace(/-/g, '');
-
-    const user = await User.findOne({ phone: normalizedPhone });
+    const searchQuery = getPhoneSearchQuery(phone);
+    const user = await User.findOne(searchQuery);
 
     if (!user) {
       return res.status(404).json({ success: false, error: 'No account found for this phone number. Please request an OTP first.' });
@@ -344,9 +367,10 @@ const createOrder = async (req, res, next) => {
     // Process items and check stock
     const processedItems = [];
     for (const item of items) {
-      const product = await Product.findById(item.productId);
+      const targetProdId = item.productId || item.id || item._id;
+      const product = await Product.findById(targetProdId);
       if (!product) {
-        return res.status(404).json({ success: false, error: `Product not found for ID ${item.productId}` });
+        return res.status(404).json({ success: false, error: `Product not found for ID ${targetProdId || 'unknown'}` });
       }
       
       const price = parseFloat(item.price);
