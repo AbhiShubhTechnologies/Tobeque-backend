@@ -15,6 +15,29 @@ const Notification = require('../models/notification');
 const User = require('../models/user');
 const { getMessaging, isFirebaseReady } = require('../config/firebase');
 
+// ─── Helper: Resolve relative image paths to full absolute URLs for FCM ─────────
+
+const resolveAbsoluteImageUrl = (url, req) => {
+  if (!url || typeof url !== 'string' || !url.trim()) return null;
+  const trimmed = url.trim();
+
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    return trimmed;
+  }
+
+  let backendBase = process.env.BACKEND_URL;
+  if (!backendBase && req) {
+    backendBase = `${req.protocol}://${req.get('host')}`;
+  }
+  if (!backendBase) {
+    backendBase = 'https://backend.tobeque.com';
+  }
+
+  backendBase = backendBase.replace(/\/+$/, '');
+  const cleanPath = trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
+  return `${backendBase}${cleanPath}`;
+};
+
 // ─── Helper: Build FCM message object ────────────────────────────────────────
 
 const buildFcmMessage = ({ title, subtitle, body, imageUrl, data }) => {
@@ -74,12 +97,14 @@ exports.sendNotification = async (req, res) => {
       });
     }
 
+    const absoluteImageUrl = resolveAbsoluteImageUrl(imageUrl, req);
+
     const messaging = getMessaging();
     const { notification: fcmNotification, dataPayload } = buildFcmMessage({
       title,
       subtitle,
       body,
-      imageUrl,
+      imageUrl: absoluteImageUrl,
       data
     });
 
@@ -103,7 +128,7 @@ exports.sendNotification = async (req, res) => {
             channelId: 'tobeque_notifications',
             priority: 'high',
             defaultVibrateTimings: true,
-            ...(imageUrl && { imageUrl })
+            ...(absoluteImageUrl && { imageUrl: absoluteImageUrl })
           }
         },
         apns: {
@@ -111,11 +136,11 @@ exports.sendNotification = async (req, res) => {
             aps: {
               sound: 'default',
               badge: 1,
-              mutableContent: imageUrl ? 1 : 0 // Enable NSE for image
+              mutableContent: absoluteImageUrl ? 1 : 0 // Enable NSE for image
             }
           },
-          ...(imageUrl && {
-            fcmOptions: { imageUrl }
+          ...(absoluteImageUrl && {
+            fcmOptions: { imageUrl: absoluteImageUrl }
           })
         }
       };
@@ -146,12 +171,12 @@ exports.sendNotification = async (req, res) => {
           priority: 'high',
           notification: {
             channelId: 'tobeque_notifications',
-            ...(imageUrl && { imageUrl })
+            ...(absoluteImageUrl && { imageUrl: absoluteImageUrl })
           }
         },
         apns: {
           payload: { aps: { sound: 'default', badge: 1 } },
-          ...(imageUrl && { fcmOptions: { imageUrl } })
+          ...(absoluteImageUrl && { fcmOptions: { imageUrl: absoluteImageUrl } })
         }
       };
 
@@ -197,12 +222,12 @@ exports.sendNotification = async (req, res) => {
           priority: 'high',
           notification: {
             channelId: 'tobeque_notifications',
-            ...(imageUrl && { imageUrl })
+            ...(absoluteImageUrl && { imageUrl: absoluteImageUrl })
           }
         },
         apns: {
           payload: { aps: { sound: 'default', badge: 1 } },
-          ...(imageUrl && { fcmOptions: { imageUrl } })
+          ...(absoluteImageUrl && { fcmOptions: { imageUrl: absoluteImageUrl } })
         }
       };
 
