@@ -246,10 +246,12 @@ const createProduct = async (req, res, next) => {
       twitterDescription,
       twitterImage,
       twitterCard,
+      twitterMeta,
       ogTitle,
       ogDescription,
       ogImage,
       ogType,
+      ogMeta,
       imageAltTag,
       countdownEvergreen,
       restartCountdownAfter,
@@ -420,10 +422,12 @@ const createProduct = async (req, res, next) => {
       twitterDescription,
       twitterImage,
       twitterCard,
+      twitterMeta,
       ogTitle,
       ogDescription,
       ogImage,
       ogType,
+      ogMeta,
       imageAltTag,
       countdownEvergreen: countdownEvergreen === 'true' || countdownEvergreen === true,
       restartCountdownAfter: restartCountdownAfter ? parseInt(restartCountdownAfter) : null,
@@ -564,7 +568,7 @@ const updateProduct = async (req, res, next) => {
       product.sku = sku;
     }
 
-    const { slug: customSlug, seoKeywords, seoSchema, twitterTitle, twitterDescription, twitterImage, twitterCard, ogTitle, ogDescription, ogImage, ogType, imageAltTag } = req.body;
+    const { slug: customSlug, seoKeywords, seoSchema, twitterMeta, twitterTitle, twitterDescription, twitterImage, twitterCard, ogMeta, ogTitle, ogDescription, ogImage, ogType, imageAltTag } = req.body;
 
     if (customSlug && customSlug.trim() !== '') {
       product.slug = slugify(customSlug);
@@ -588,10 +592,12 @@ const updateProduct = async (req, res, next) => {
     product.seoDescription = seoDescription !== undefined ? seoDescription : product.seoDescription;
     product.seoKeywords = seoKeywords !== undefined ? seoKeywords : product.seoKeywords;
     product.seoSchema = seoSchema !== undefined ? seoSchema : product.seoSchema;
+    product.twitterMeta = twitterMeta !== undefined ? twitterMeta : product.twitterMeta;
     product.twitterTitle = twitterTitle !== undefined ? twitterTitle : product.twitterTitle;
     product.twitterDescription = twitterDescription !== undefined ? twitterDescription : product.twitterDescription;
     product.twitterImage = twitterImage !== undefined ? twitterImage : product.twitterImage;
     product.twitterCard = twitterCard !== undefined ? twitterCard : product.twitterCard;
+    product.ogMeta = ogMeta !== undefined ? ogMeta : product.ogMeta;
     product.ogTitle = ogTitle !== undefined ? ogTitle : product.ogTitle;
     product.ogDescription = ogDescription !== undefined ? ogDescription : product.ogDescription;
     product.ogImage = ogImage !== undefined ? ogImage : product.ogImage;
