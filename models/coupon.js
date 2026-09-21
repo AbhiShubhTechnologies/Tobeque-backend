@@ -39,6 +39,10 @@ const CouponSchema = new mongoose.Schema({
   status: {
     type: Boolean,
     default: true
+  },
+  freeShipping: {
+    type: Boolean,
+    default: false
   }
 }, {
   timestamps: true,

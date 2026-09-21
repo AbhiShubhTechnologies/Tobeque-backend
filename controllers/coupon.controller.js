@@ -20,7 +20,7 @@ const getCoupons = async (req, res, next) => {
 // @access  Private
 const createCoupon = async (req, res, next) => {
   try {
-    const { code, type, discountValue, minOrderAmount, usageLimit, startDate, expiryDate, status } = req.body;
+    const { code, type, discountValue, minOrderAmount, usageLimit, startDate, expiryDate, status, freeShipping } = req.body;
 
     const codeUpper = code.toString().toUpperCase().trim();
 
@@ -37,7 +37,8 @@ const createCoupon = async (req, res, next) => {
       usageLimit: usageLimit ? parseInt(usageLimit) : 100,
       startDate,
       expiryDate,
-      status: status !== undefined ? status : true
+      status: status !== undefined ? status : true,
+      freeShipping: freeShipping !== undefined ? freeShipping : false
     });
 
     await AdminLog.create({
@@ -68,7 +69,7 @@ const updateCoupon = async (req, res, next) => {
       return res.status(404).json({ success: false, error: 'Coupon not found' });
     }
 
-    const { code, type, discountValue, minOrderAmount, usageLimit, startDate, expiryDate, status } = req.body;
+    const { code, type, discountValue, minOrderAmount, usageLimit, startDate, expiryDate, status, freeShipping } = req.body;
 
     if (code) {
       const codeUpper = code.toString().toUpperCase().trim();
@@ -88,6 +89,7 @@ const updateCoupon = async (req, res, next) => {
     coupon.startDate = startDate || coupon.startDate;
     coupon.expiryDate = expiryDate || coupon.expiryDate;
     coupon.status = status !== undefined ? status : coupon.status;
+    coupon.freeShipping = freeShipping !== undefined ? freeShipping : coupon.freeShipping;
 
     await coupon.save();
 

@@ -213,7 +213,8 @@ const validateCoupon = async (req, res, next) => {
         code: coupon.code,
         type: coupon.type,
         discountValue: coupon.discountValue,
-        minOrderAmount: coupon.minOrderAmount
+        minOrderAmount: coupon.minOrderAmount,
+        freeShipping: coupon.freeShipping
       }
     });
   } catch (error) {
