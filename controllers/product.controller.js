@@ -190,7 +190,21 @@ const getProductById = async (req, res, next) => {
   try {
     const mongoose = require('mongoose');
     const param = req.params.id;
-    const query = mongoose.Types.ObjectId.isValid(param) ? { _id: param } : { slug: param };
+    const decodedParam = decodeURIComponent(param);
+
+    let query;
+    if (mongoose.Types.ObjectId.isValid(param)) {
+      query = { _id: param };
+    } else {
+      const escapeRegex = (text) => text.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
+      query = {
+        $or: [
+          { slug: param },
+          { slug: decodedParam },
+          { slug: new RegExp('^' + escapeRegex(decodedParam) + '$', 'i') }
+        ]
+      };
+    }
 
     const product = await Product.findOne(query)
       .populate('category', 'id name slug')
