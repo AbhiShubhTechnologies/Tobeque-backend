@@ -25,6 +25,18 @@ function createSeoMetaInjector(distPath) {
         description: 'Learn about Tobeque, an Indian fashion brand creating stylish, comfortable clothing for teen girls with in-house design and manufacturing in Haryana, India.',
         keywords: 'about Tobeque, teen fashion brand India, fashion brand for teen girls, teenage girls clothing brand, girls fashion India, teen clothing brand, Tobeque Haryana'
       },
+      'about-us': {
+        title: 'About Tobeque | Teen Fashion Brand for Girls in India',
+        description: 'Learn about Tobeque, an Indian fashion brand creating stylish, comfortable clothing for teen girls with in-house design and manufacturing in Haryana, India.',
+        keywords: 'about Tobeque, teen fashion brand India, fashion brand for teen girls, teenage girls clothing brand, girls fashion India, teen clothing brand, Tobeque Haryana',
+        canonical: 'https://tobeque.com/about-tobeque'
+      },
+      'about': {
+        title: 'About Tobeque | Teen Fashion Brand for Girls in India',
+        description: 'Learn about Tobeque, an Indian fashion brand creating stylish, comfortable clothing for teen girls with in-house design and manufacturing in Haryana, India.',
+        keywords: 'about Tobeque, teen fashion brand India, fashion brand for teen girls, teenage girls clothing brand, girls fashion India, teen clothing brand, Tobeque Haryana',
+        canonical: 'https://tobeque.com/about-tobeque'
+      },
       'contact': {
         title: 'Contact Tobeque | Teen Girls Fashion Support India',
         description: 'Contact Tobeque for help with orders, products, returns, sizing or general questions. Reach our teen girls fashion support team in Haryana, India today.',
@@ -45,6 +57,11 @@ function createSeoMetaInjector(distPath) {
         description: 'Learn about how Tobeque uses cookies and similar technologies to enhance your shopping experience and website security.',
         keywords: 'cookie policy, Tobeque cookies, tracking policies'
       },
+      'cookie-settings': {
+        title: 'Cookie Settings | Tobeque Teen Fashion',
+        description: 'Manage your cookie settings and privacy preferences at Tobeque.',
+        keywords: 'cookie settings, privacy preferences, Tobeque cookies'
+      },
       'career': {
         title: 'Careers at Tobeque | Join Our Fashion Team',
         description: 'Explore job opportunities and careers at Tobeque. Join our passionate team of designers, marketers, and fashion enthusiasts.',
@@ -64,6 +81,12 @@ function createSeoMetaInjector(distPath) {
         title: 'Tobeque Style Journal | Teen Fashion Tips & Trends',
         description: 'Discover the latest teen fashion tips, outfit ideas, styling guides, and trend updates on the Tobeque Style Journal.',
         keywords: 'teen fashion blog, outfit ideas, styling tips, Tobeque journal'
+      },
+      'style-journal': {
+        title: 'Tobeque Style Journal | Teen Fashion Tips & Trends',
+        description: 'Discover the latest teen fashion tips, outfit ideas, styling guides, and trend updates on the Tobeque Style Journal.',
+        keywords: 'teen fashion blog, outfit ideas, styling tips, Tobeque journal',
+        canonical: 'https://tobeque.com/blogs'
       },
       'steal-the-style': {
         title: 'Steal The Style | Curated Teen Outfits | Tobeque',
