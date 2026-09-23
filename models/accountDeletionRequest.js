@@ -21,6 +21,31 @@ const accountDeletionRequestSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    // ── Deletion History (OTP-verified auto-deletions) ─────────────────────
+    // Set when the account was actually deleted via OTP verification flow.
+    // Allows admin to see exactly who deleted their account, when, and what data was removed.
+    deletedViaOtp: {
+      type: Boolean,
+      default: false,
+    },
+    deletedAt: {
+      type: Date,
+      default: null,
+    },
+    // Snapshot of user data captured right before deletion (for admin audit trail)
+    userSnapshot: {
+      type: Object,
+      default: null,
+    },
+    // How many orders were anonymized during deletion
+    ordersAnonymized: {
+      type: Number,
+      default: 0,
+    },
+    refundsAnonymized: {
+      type: Number,
+      default: 0,
+    },
   },
   { timestamps: true }
 );
