@@ -92,6 +92,11 @@ function createSeoMetaInjector(distPath) {
         title: 'Steal The Style | Curated Teen Outfits | Tobeque',
         description: 'Get inspired by curated outfits and complete looks designed for teenagers at Tobeque.',
         keywords: 'steal the style, outfit inspiration, teen outfits, curated looks'
+      },
+      'delete-account': {
+        title: 'Delete Your Tobeque Account | Account Deletion Request',
+        description: 'Request permanent deletion of your Tobeque account and associated personal data. Submit your registered email or phone number to initiate the process.',
+        keywords: 'delete Tobeque account, account deletion request, remove account, Tobeque data deletion'
       }
     };
 

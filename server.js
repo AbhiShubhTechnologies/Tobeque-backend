@@ -147,6 +147,7 @@ app.use('/api/job-postings', require('./routes/jobPosting'));
 app.use('/api/community-styles', require('./routes/communityStyle'));
 app.use('/api/about-us', require('./routes/aboutUs'));
 app.use('/api/contact', require('./routes/contact'));
+app.use('/api/account-deletion', require('./routes/accountDeletion'));
 app.use('/api/notifications', require('./routes/notification'));
 
 // Root Status check
