@@ -363,6 +363,12 @@ const createProduct = async (req, res, next) => {
       parsedSizeChart = typeof sizeChart === 'string' ? (sizeChart ? JSON.parse(sizeChart) : null) : sizeChart;
     }
 
+    // Handle sizeGuideImage upload — embed into sizeChart.image
+    if (req.files && req.files.sizeGuideImage && req.files.sizeGuideImage[0]) {
+      if (!parsedSizeChart) parsedSizeChart = {};
+      parsedSizeChart.image = req.files.sizeGuideImage[0].path;
+    }
+
     let parsedCustomSections = [];
     if (customSections) {
       parsedCustomSections = typeof customSections === 'string' ? JSON.parse(customSections) : customSections;
@@ -669,6 +675,14 @@ const updateProduct = async (req, res, next) => {
       } else {
         product.sizeChart = typeof sizeChart === 'string' ? JSON.parse(sizeChart) : sizeChart;
       }
+    }
+
+    // Handle sizeGuideImage upload — embed into sizeChart.image
+    if (req.files && req.files.sizeGuideImage && req.files.sizeGuideImage[0]) {
+      const currentChart = product.sizeChart || {};
+      product.sizeChart = { ...currentChart, image: req.files.sizeGuideImage[0].path };
+      // Mark as modified since it's a Mixed type
+      product.markModified('sizeChart');
     }
 
     if (colors !== undefined) {

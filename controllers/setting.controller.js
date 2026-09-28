@@ -31,8 +31,16 @@ const updateSettings = async (req, res, next) => {
     const settingsPayload = req.body; // e.g. { site_name: "Tobeque Core", currency: "USD" }
 
     // Upload new logo if provided
-    if (req.file) {
+    if (req.files && req.files.logo && req.files.logo[0]) {
+      settingsPayload['site_logo'] = req.files.logo[0].path;
+    } else if (req.file) {
+      // fallback for single file (legacy)
       settingsPayload['site_logo'] = req.file.path;
+    }
+
+    // Upload standard size guide image if provided
+    if (req.files && req.files.standardSizeGuideImage && req.files.standardSizeGuideImage[0]) {
+      settingsPayload['standardSizeGuideImage'] = req.files.standardSizeGuideImage[0].path;
     }
 
     const updatePromises = Object.keys(settingsPayload).map(async (key) => {
@@ -78,7 +86,8 @@ const getPublicSettings = async (req, res, next) => {
     const settingsList = await Setting.find({
       key: { $in: [
         'storeName', 'storeCurrency', 'deliveryEstimateMin', 'deliveryEstimateMax',
-        'shippingFallbackRate', 'freeShippingThreshold', 'codFee', 'shippingReturnsText'
+        'shippingFallbackRate', 'freeShippingThreshold', 'codFee', 'shippingReturnsText',
+        'standardSizeGuideImage'
       ]}
     });
     
