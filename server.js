@@ -149,6 +149,7 @@ app.use('/api/about-us', require('./routes/aboutUs'));
 app.use('/api/contact', require('./routes/contact'));
 app.use('/api/account-deletion', require('./routes/accountDeletion'));
 app.use('/api/notifications', require('./routes/notification'));
+app.use('/api/admin-notifications', require('./routes/adminNotification'));
 
 // Root Status check
 app.get('/api/status', (req, res) => {

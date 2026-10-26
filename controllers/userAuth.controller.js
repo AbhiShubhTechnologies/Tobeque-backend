@@ -4,6 +4,7 @@ const { sendOrderConfirmationEmail } = require('../utils/emailService');
 const { sendOtpViaSMS } = require('../utils/smsService');
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
+const { notifyAdminNewOrder } = require('../utils/adminNotificationService');
 
 // Development fallback OTP if Fast2SMS key is missing
 const DEV_OTP = '123456';
@@ -492,7 +493,10 @@ const createOrder = async (req, res, next) => {
       }
     }
 
-    // Order created successfully — email will be sent when admin confirms the order.
+    // Order created successfully — trigger real-time admin alert
+    notifyAdminNewOrder(order, req.user).catch((err) => {
+      console.error('[Notification] Failed to alert admin for order:', err);
+    });
 
     res.status(201).json({
       success: true,
@@ -763,6 +767,11 @@ const verifyRazorpayPayment = async (req, res, next) => {
         await productToUpdate.save();
       }
     }
+
+    // Order created & verified — trigger real-time admin alert
+    notifyAdminNewOrder(order, req.user).catch((err) => {
+      console.error('[Notification] Failed to alert admin for verified order:', err);
+    });
 
     res.status(201).json({
       success: true,
