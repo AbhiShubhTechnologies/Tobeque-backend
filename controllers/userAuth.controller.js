@@ -5,6 +5,7 @@ const { sendOtpViaSMS } = require('../utils/smsService');
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
 const { notifyAdminNewOrder } = require('../utils/adminNotificationService');
+const { sendPurchaseEvent } = require('../utils/metaCapi');
 
 // Development fallback OTP if Fast2SMS key is missing
 const DEV_OTP = '123456';
@@ -352,7 +353,7 @@ const updateUserProfile = async (req, res, next) => {
 // @access  Private (user)
 const createOrder = async (req, res, next) => {
   try {
-    const { shippingAddress, billingAddress, items, customerName, customerPhone, couponCode, paymentMethod, notes, companyName, companyGst, shippingCost: clientShippingCost } = req.body;
+    const { shippingAddress, billingAddress, items, customerName, customerPhone, couponCode, paymentMethod, notes, companyName, companyGst, shippingCost: clientShippingCost, metaEventId, fbp, fbc } = req.body;
 
     if (!items || items.length === 0) {
       return res.status(400).json({ success: false, error: 'No items in order' });
@@ -468,7 +469,9 @@ const createOrder = async (req, res, next) => {
       couponCode: appliedCouponCode,
       notes,
       companyName: companyName || '',
-      companyGst: companyGst || ''
+      companyGst: companyGst || '',
+      metaEventId: metaEventId || (`evt_${orderNumber}`),
+      metaPurchaseSent: false
     });
 
     // Create order items and deduct inventory
@@ -493,15 +496,41 @@ const createOrder = async (req, res, next) => {
       }
     }
 
-    // Order created successfully — trigger real-time admin alert
+        // Order created successfully — trigger real-time admin alert
     notifyAdminNewOrder(order, req.user).catch((err) => {
       console.error('[Notification] Failed to alert admin for order:', err);
     });
 
+    // ── Meta CAPI: Purchase (COD) ────────────────────────────────────────────
+    const finalEventId = order.metaEventId || metaEventId || (`evt_${order.orderNumber}`);
+    if (paymentMethod === 'cod' && !order.metaPurchaseSent) {
+      try {
+        const capiItems = await OrderItem.find({ order: order._id });
+        const userForCapi = await User.findById(req.user.id).select('email phone firstName lastName').lean();
+        sendPurchaseEvent({
+          order: order.toObject ? order.toObject() : order,
+          user: userForCapi || req.user,
+          items: capiItems,
+          eventId: finalEventId,
+          requestMeta: {
+            ip: req.ip || req.headers['x-forwarded-for']?.split(',')[0]?.trim() || '',
+            userAgent: req.headers['user-agent'] || '',
+            fbp: fbp || req.cookies?._fbp || '',
+            fbc: fbc || req.cookies?._fbc || '',
+          },
+        });
+        order.metaPurchaseSent = true;
+        await order.save();
+      } catch (capiErr) {
+        console.error('[MetaCAPI] Error preparing COD Purchase event:', capiErr.message);
+      }
+    }
+
     res.status(201).json({
       success: true,
       message: 'Order created successfully',
-      order
+      order,
+      metaEventId: order.metaEventId
     });
   } catch (error) {
     next(error);
@@ -752,7 +781,9 @@ const verifyRazorpayPayment = async (req, res, next) => {
       discountAmount, taxAmount: finalTaxAmount, couponCode: appliedCouponCode, notes,
       companyName: companyName || '', companyGst: companyGst || '',
       razorpayOrderId: isZeroAmountOrder ? 'order_zero_discount' : razorpay_order_id,
-      razorpayPaymentId: isZeroAmountOrder ? 'pay_zero_discount' : razorpay_payment_id
+      razorpayPaymentId: isZeroAmountOrder ? 'pay_zero_discount' : razorpay_payment_id,
+      metaEventId: metaEventId || (`evt_${orderNumber}`),
+      metaPurchaseSent: false
     });
 
     for (const pItem of processedItems) {
@@ -768,15 +799,41 @@ const verifyRazorpayPayment = async (req, res, next) => {
       }
     }
 
-    // Order created & verified — trigger real-time admin alert
+        // Order created & verified — trigger real-time admin alert
     notifyAdminNewOrder(order, req.user).catch((err) => {
       console.error('[Notification] Failed to alert admin for verified order:', err);
     });
 
+    // ── Meta CAPI: Purchase (Online – Razorpay verified) ─────────────────────
+    const finalOnlineEventId = order.metaEventId || metaEventId || (`evt_${order.orderNumber}`);
+    if (!order.metaPurchaseSent) {
+      try {
+        const capiOnlineItems = await OrderItem.find({ order: order._id });
+        const userForCapiOnline = await User.findById(req.user.id).select('email phone firstName lastName').lean();
+        sendPurchaseEvent({
+          order: order.toObject ? order.toObject() : order,
+          user: userForCapiOnline || req.user,
+          items: capiOnlineItems,
+          eventId: finalOnlineEventId,
+          requestMeta: {
+            ip: req.ip || req.headers['x-forwarded-for']?.split(',')[0]?.trim() || '',
+            userAgent: req.headers['user-agent'] || '',
+            fbp: fbp || req.cookies?._fbp || '',
+            fbc: fbc || req.cookies?._fbc || '',
+          },
+        });
+        order.metaPurchaseSent = true;
+        await order.save();
+      } catch (capiErr) {
+        console.error('[MetaCAPI] Error preparing online Purchase event:', capiErr.message);
+      }
+    }
+
     res.status(201).json({
       success: true,
       message: 'Order created and payment verified successfully',
-      order
+      order,
+      metaEventId: order.metaEventId
     });
   } catch (error) {
     next(error);

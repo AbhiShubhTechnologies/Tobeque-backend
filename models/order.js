@@ -125,6 +125,16 @@ const OrderSchema = new mongoose.Schema({
   shiprocketPickupDate: {
     type: String, // Date string YYYY-MM-DD for scheduled pickup
     default: null
+  },
+
+  // ── Meta Conversions API & Pixel Deduplication ────────────────────────────
+  metaEventId: {
+    type: String,
+    default: null
+  },
+  metaPurchaseSent: {
+    type: Boolean,
+    default: false
   }
 }, {
   timestamps: true,
