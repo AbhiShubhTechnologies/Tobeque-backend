@@ -25,7 +25,27 @@ const protectUser = async (req, res, next) => {
         });
       }
 
-      req.user = await User.findById(decoded.id).select('-password -otpCode -otpExpiry');
+      if (decoded.id === 'demo_test_user_id') {
+        req.user = await User.findOne({
+          $or: [
+            { phone: '+919999999999' },
+            { phone: '9999999999' }
+          ]
+        }).select('-password -otpCode -otpExpiry');
+
+        if (!req.user) {
+          req.user = await User.create({
+            phone: '+919999999999',
+            firstName: 'Apple',
+            lastName: 'Reviewer',
+            email: 'reviewer@tobeque.com',
+            password: '123456',
+            status: 'active'
+          });
+        }
+      } else {
+        req.user = await User.findById(decoded.id).select('-password -otpCode -otpExpiry');
+      }
 
       if (!req.user) {
         return res.status(401).json({

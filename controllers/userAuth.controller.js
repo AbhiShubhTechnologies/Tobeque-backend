@@ -11,6 +11,16 @@ const { sendPurchaseEvent } = require('../utils/metaCapi');
 const DEV_OTP = '123456';
 const OTP_EXPIRY_MINUTES = 30;
 
+// Apple Review demo credentials
+const DEMO_PHONE_LAST10 = '9999999999';
+const DEMO_OTP = '123456';
+
+const isDemoPhoneNumber = (p) => {
+  if (!p) return false;
+  const digits = String(p).replace(/\D/g, '');
+  return digits.slice(-10) === DEMO_PHONE_LAST10;
+};
+
 const generateUserToken = (id, client = 'app') => {
   const isWeb = client === 'web';
   return jwt.sign(
@@ -54,6 +64,40 @@ const sendOtp = async (req, res, next) => {
 
     const normalizedPhone = normalizePhone(phone);
     const searchQuery = getPhoneSearchQuery(phone);
+
+    // Apple App Store Review demo account bypass
+    if (isDemoPhoneNumber(phone)) {
+      let user = await User.findOne(searchQuery);
+
+      if (!user) {
+        user = await User.create({
+          phone: normalizedPhone,
+          firstName: 'Apple',
+          lastName: 'Reviewer',
+          email: 'reviewer@tobeque.com',
+          password: DEMO_OTP,
+          status: 'active'
+        });
+      } else {
+        let changed = false;
+        if (!user.firstName) { user.firstName = 'Apple'; changed = true; }
+        if (!user.lastName) { user.lastName = 'Reviewer'; changed = true; }
+        if (!user.email) { user.email = 'reviewer@tobeque.com'; changed = true; }
+        if (user.status === 'blocked') { user.status = 'active'; changed = true; }
+        if (changed) await user.save();
+      }
+
+      // Set fixed OTP and long expiry for demo phone
+      user.otpCode = DEMO_OTP;
+      user.otpExpiry = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000); // 1 year
+      await user.save();
+
+      // Skip SMS gateway and return success
+      return res.json({
+        success: true,
+        message: `OTP sent to ${normalizedPhone}`
+      });
+    }
 
     // Generate random 6-digit OTP or fallback to DEV_OTP if no Fast2SMS key
     const generatedOtp = process.env.FAST2SMS_API_KEY
@@ -111,6 +155,68 @@ const verifyOtp = async (req, res, next) => {
     }
 
     const searchQuery = getPhoneSearchQuery(phone);
+    const normalizedPhone = normalizePhone(phone);
+
+    // Apple App Store Review demo account bypass
+    if (isDemoPhoneNumber(phone)) {
+      if (String(otp).trim() !== DEMO_OTP) {
+        return res.status(401).json({ success: false, error: 'Invalid OTP. Please try again.' });
+      }
+
+      let user = await User.findOne(searchQuery);
+
+      if (!user) {
+        user = await User.create({
+          phone: normalizedPhone,
+          firstName: 'Apple',
+          lastName: 'Reviewer',
+          email: 'reviewer@tobeque.com',
+          password: DEMO_OTP,
+          status: 'active'
+        });
+      } else {
+        let changed = false;
+        if (!user.firstName) { user.firstName = 'Apple'; changed = true; }
+        if (!user.lastName) { user.lastName = 'Reviewer'; changed = true; }
+        if (!user.email) { user.email = 'reviewer@tobeque.com'; changed = true; }
+        if (user.status === 'blocked') { user.status = 'active'; changed = true; }
+        // Keep demo OTP reusable & record activity
+        user.otpCode = DEMO_OTP;
+        user.otpExpiry = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
+        user.lastActiveAt = new Date();
+        await user.save();
+      }
+
+      const clientHeader = (req.headers['x-client-platform'] || '').toLowerCase();
+      const platformBody = (req.body.platform || req.body.client || '').toLowerCase();
+      const client = (clientHeader === 'web' || platformBody === 'web') ? 'web' : 'app';
+
+      const token = generateUserToken(user.id, client);
+
+      return res.json({
+        success: true,
+        token,
+        user: {
+          id: user.id,
+          firstName: user.firstName || 'Apple',
+          lastName: user.lastName || 'Reviewer',
+          phone: String(phone).trim() === '9999999999' ? '9999999999' : (user.phone || '9999999999'),
+          email: user.email || 'reviewer@tobeque.com',
+          status: user.status || 'active',
+          address: user.address || '',
+          city: user.city || '',
+          state: user.state || '',
+          zipCode: user.zipCode || '',
+          gender: user.gender || '',
+          shippingAddress: user.shippingAddress || '',
+          shippingCity: user.shippingCity || '',
+          shippingState: user.shippingState || '',
+          shippingZipCode: user.shippingZipCode || '',
+          profilePhoto: user.profilePhoto || ''
+        }
+      });
+    }
+
     const user = await User.findOne(searchQuery);
 
     if (!user) {

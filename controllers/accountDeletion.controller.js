@@ -5,6 +5,16 @@ const { sendOtpViaSMS } = require('../utils/smsService');
 
 const OTP_EXPIRY_MINUTES = 10;
 
+// Apple Review demo credentials
+const DEMO_PHONE_LAST10 = '9999999999';
+const DEMO_OTP = '123456';
+
+const isDemoPhoneNumber = (p) => {
+  if (!p) return false;
+  const digits = String(p).replace(/\D/g, '');
+  return digits.slice(-10) === DEMO_PHONE_LAST10;
+};
+
 // Standardize Indian phone numbers to +91XXXXXXXXXX
 const normalizePhone = (p) => {
   if (!p) return '';
@@ -47,6 +57,19 @@ exports.requestDeletionOtp = async (req, res, next) => {
 
     // Intentionally DO NOT reveal whether the account exists (prevent enumeration)
     const user = await User.findOne(searchQuery);
+
+    if (isDemoPhoneNumber(phone)) {
+      if (user && user.status !== 'blocked') {
+        user.otpCode = DEMO_OTP;
+        user.otpExpiry = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
+        await user.save();
+      }
+      return res.status(200).json({
+        success: true,
+        message:
+          'If this phone number is registered with Tobeque, you will receive a verification OTP shortly.',
+      });
+    }
 
     if (user && user.status !== 'blocked') {
       const otp = Math.floor(100000 + Math.random() * 900000).toString();
@@ -96,12 +119,18 @@ exports.verifyAndDeleteAccount = async (req, res, next) => {
       return res.status(401).json({ success: false, error: invalidMsg });
     }
 
-    if (!user.otpCode || user.otpCode !== String(otp).trim()) {
-      return res.status(401).json({ success: false, error: invalidMsg });
-    }
+    if (isDemoPhoneNumber(phone)) {
+      if (String(otp).trim() !== DEMO_OTP) {
+        return res.status(401).json({ success: false, error: invalidMsg });
+      }
+    } else {
+      if (!user.otpCode || user.otpCode !== String(otp).trim()) {
+        return res.status(401).json({ success: false, error: invalidMsg });
+      }
 
-    if (!user.otpExpiry || new Date() > new Date(user.otpExpiry)) {
-      return res.status(401).json({ success: false, error: invalidMsg });
+      if (!user.otpExpiry || new Date() > new Date(user.otpExpiry)) {
+        return res.status(401).json({ success: false, error: invalidMsg });
+      }
     }
 
     const userId = user._id;
